@@ -1,0 +1,101 @@
+@page "/aircrafts/add"
+@page "/aircrafts/add/{id}"
+
+@inject HttpClient httpClient
+@inject NavigationManager navigationManager
+
+<h2>Aviones</h2>
+
+<EditForm Model="Aircraft" OnValidSubmit="SubmitForm">
+    <section class="title-section">
+        <h3>Aviones</h3>
+        <button class="btn btn-sm btn-success" type="submit">
+            @(string.IsNullOrEmpty(id) ? "Agregar" : "Editar")
+        </button>
+    </section>
+    <hr />
+
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    <aside class="mb-3">
+        <label for="description" class="form-label">Descripción</label>
+        <input autocomplete="off" type="text" class="form-control" id="description" @bind="Aircraft.Description">
+    </aside>
+    <aside class="mb-3">
+        <label for="type" class="form-label">Tipo de avión</label>
+        <InputSelect class="form-select" id="type" aria-label="Aircraft type select" @bind-Value="Aircraft.TypeId">
+            <option value=null>Selecciona una opción</option>
+            @foreach (var aircraftType in AircraftTypes)
+            {
+                <option value="@aircraftType.TypeId">@aircraftType.Description</option>
+            }
+        </InputSelect>
+    </aside>
+</EditForm>
+
+@code {
+    [Parameter]
+    public string id { get; set; }
+    private AircraftDto Aircraft { get; set; }
+    private IEnumerable<AircraftTypeDto> AircraftTypes { get; set; }
+
+    public AircraftForm()
+    {
+        id = string.Empty;
+        Aircraft = new AircraftDto();
+        AircraftTypes = new List<AircraftTypeDto>();
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadInitialValues();
+
+        if (!string.IsNullOrEmpty(id))
+        {
+            await LoadInitialValues(id);
+        }
+    }
+
+    private async Task SubmitForm()
+    {
+        if (string.IsNullOrEmpty(id))
+            await Add();
+        else
+            await Edit();
+    }
+
+    private async Task Add()
+    {
+        var response = await httpClient.PostAsJsonAsync("api/aircrafts", Aircraft);
+        if (response.IsSuccessStatusCode)
+        {
+            await response.Content.ReadAsStringAsync();
+            navigationManager.NavigateTo("/aircrafts");
+        }
+    }
+
+    private async Task Edit()
+    {
+        var response = await httpClient.PutAsJsonAsync("api/aircrafts", Aircraft);
+        if (response.IsSuccessStatusCode)
+        {
+            await response.Content.ReadAsStringAsync();
+            navigationManager.NavigateTo("/aircrafts");
+        }
+    }
+
+    private async Task LoadInitialValues()
+    {
+        AircraftTypes = await httpClient.GetFromJsonAsync<IEnumerable<AircraftTypeDto>>("api/aircraft-types")
+        ?? Enumerable.Empty<AircraftTypeDto>();
+    }
+
+    private async Task LoadInitialValues(string id)
+    {
+        var response = await httpClient
+        .GetFromJsonAsync<IEnumerable<AircraftDto>>($"api/aircrafts/{id}");
+
+        Aircraft = response?.FirstOrDefault() ?? new AircraftDto();
+    }
+}

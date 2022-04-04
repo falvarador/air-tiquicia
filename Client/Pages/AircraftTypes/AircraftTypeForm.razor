@@ -1,0 +1,87 @@
+@page "/aircraft-types/add"
+@page "/aircraft-types/add/{id}"
+
+@inject HttpClient httpClient
+@inject NavigationManager navigationManager
+
+<EditForm Model="AircraftType" OnValidSubmit="SubmitForm">
+    <section class="title-section">
+        <h3>Tipos de aviones</h3>
+        <button class="btn btn-sm btn-success" type="submit">
+            @(string.IsNullOrEmpty(id) ? "Agregar" : "Editar")
+        </button>
+    </section>
+    <hr />
+
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    <aside class="mb-3">
+        <label for="description" class="form-label">Descripción</label>
+        <input autocomplete="off" type="text" class="form-control" id="description" @bind="AircraftType.Description" />
+    </aside>
+    <aside class="mb-3">
+        <label for="rows" class="form-label">Filas</label>
+        <input autocomplete="off" type="number" class="form-control" id="rows" @bind="AircraftType.Rows" />
+    </aside>
+    <aside class="mb-3">
+        <label for="seats" class="form-label">Asientos</label>
+        <input autocomplete="off" type="number" class="form-control" id="seats" @bind="AircraftType.Seats" />
+    </aside>
+</EditForm>
+
+@code {
+    [Parameter]
+    public string id { get; set; }
+    private AircraftTypeDto AircraftType { get; set; }
+
+    public AircraftTypeForm()
+    {
+        id = string.Empty;
+        AircraftType = new AircraftTypeDto();
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!string.IsNullOrEmpty(id))
+        {
+            await LoadInitialValues(id);
+        }
+    }
+
+    public async Task SubmitForm()
+    {
+        if (string.IsNullOrEmpty(id))
+            await Add();
+        else
+            await Edit();
+    }
+
+    private async Task Add()
+    {
+        var response = await httpClient.PostAsJsonAsync("api/aircraft-types", AircraftType);
+        if (response.IsSuccessStatusCode)
+        {
+            await response.Content.ReadAsStringAsync();
+            navigationManager.NavigateTo("/aircraft-types");
+        }
+    }
+
+    private async Task Edit()
+    {
+        var response = await httpClient.PutAsJsonAsync("api/aircraft-types", AircraftType);
+        if (response.IsSuccessStatusCode)
+        {
+            await response.Content.ReadAsStringAsync();
+            navigationManager.NavigateTo("/aircraft-types");
+        }
+    }
+
+    private async Task LoadInitialValues(string id)
+    {
+        var response = await httpClient
+        .GetFromJsonAsync<IEnumerable<AircraftTypeDto>>($"api/aircraft-types/{id}");
+
+        AircraftType = response?.FirstOrDefault() ?? new AircraftTypeDto();
+    }
+}

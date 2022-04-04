@@ -1,0 +1,83 @@
+@page "/baggages-weight"
+
+@inject HttpClient httpClient
+@inject IJSRuntime jsRuntime
+@inject NavigationManager navigationManager
+
+<section class="title-section">
+    <h3>Peso por equipaje</h3>
+    <button class="btn btn-sm btn-success" @onclick="Add">Agregar nuevo</button>
+</section>
+<hr />
+
+<table class="table">
+    <thead>
+        <tr>
+            <th scope="col">Peso</th>
+            <th scope="col">Precio</th>
+            <th scope="col">Acciones</th>
+        </tr>
+    </thead>
+    <tbody>
+        @if (!BaggagesWeight.Any())
+        {
+            <text>No existen registros que mostrar.</text>
+        }
+        else 
+        {
+            @foreach (var baggageWeight in BaggagesWeight)
+            {
+                <tr>
+                    <td>@baggageWeight.Weight kg</td>
+                    <td>$ @baggageWeight.Price</td>
+                    <td>
+                        <span class="icon fa-solid fa-trash-can" aria-hidden="true"
+                        @onclick=@(() => Delete(baggageWeight.Id))></span>
+                        <span class="icon fa-solid fa-pencil" aria-hidden="true"
+                        @onclick=@(() => Edit(baggageWeight.Id))></span>
+                    </td>
+                </tr>
+            }
+        }
+    </tbody>
+</table>
+
+@code {
+    public BaggageWeight()
+    {
+        BaggagesWeight = new List<BaggageWeightDto>();
+    }
+
+    private IEnumerable<BaggageWeightDto> BaggagesWeight { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadInitialValues();
+    }
+
+    private void Add()
+    {
+        navigationManager.NavigateTo($"/baggages-weight/add");
+    }
+
+    private void Edit(int id)
+    {
+        navigationManager.NavigateTo($"/baggages-weight/add/{id}");
+    }
+
+    private async Task Delete(int id)
+    {
+        if (!await jsRuntime.InvokeAsync<bool>("confirm",
+        "¿Esta seguro que desea eliminar el peso por equipaje?"))
+            return;
+
+        await httpClient.DeleteAsync($"api/baggages-weight/{id}");
+        await LoadInitialValues();
+    }
+
+    private async Task LoadInitialValues()
+    {
+        BaggagesWeight = await httpClient.GetFromJsonAsync<IEnumerable<BaggageWeightDto>>("api/baggages-weight")
+        ?? Enumerable.Empty<BaggageWeightDto>();
+    }
+}

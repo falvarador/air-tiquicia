@@ -1,0 +1,120 @@
+@page "/users/add"
+@page "/users/add/{id}"
+
+@inject HttpClient httpClient
+@inject NavigationManager navigationManager
+
+<EditForm Model="User" OnValidSubmit="SubmitForm">
+    <section class="title-section">
+        <h3>Usuario</h3>
+        <button class="btn btn-sm btn-success" type="submit">
+            @(string.IsNullOrEmpty(id) ? "Agregar" : "Editar")
+        </button>
+    </section>
+    <hr />
+
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    <aside class="mb-3">
+        <label for="person" class="form-label">Individuo</label>
+        <InputSelect class="form-select" id="person" aria-label="Person select" @bind-Value="User.PersonId">
+            <option value=null>Selecciona una opción</option>
+            @foreach (var person in People)
+            {
+                <option value="@person.PersonId">@person.Name @person.LastName</option>
+            }
+        </InputSelect>
+    </aside>
+    <aside class="mb-3">
+        <label for="role" class="form-label">Rol</label>
+        <InputSelect class="form-select" id="role" aria-label="Role select" @bind-Value="User.RoleId">
+            <option value=null>Selecciona una opción</option>
+            @foreach (var role in Roles)
+            {
+                <option value="@role.RoleId">@role.Name</option>
+            }
+        </InputSelect>
+    </aside>
+    <aside class="mb-3">
+        <label for="username" class="form-label">Usuario</label>
+        <input autocomplete="off" type="text" class="form-control" id="username" @bind="User.Username" />
+    </aside>
+    <aside class="mb-3">
+        <label for="password" class="form-label">Contraseña</label>
+        <input autocomplete="off" type="password" class="form-control" id="password" @bind="User.Password" />
+    </aside>
+</EditForm>
+
+@code {
+    [Parameter]
+    public string id { get; set; }
+    private UserDto User { get; set; }
+
+    private IEnumerable<PersonDto> People { get; set; }
+    private IEnumerable<RoleDto> Roles { get; set; }
+
+    public UserForm()
+    {
+        id = string.Empty;
+        User = new UserDto();
+
+        People = new List<PersonDto>();
+        Roles = new List<RoleDto>();
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadInitialValues();
+
+        if (!string.IsNullOrEmpty(id))
+        {
+            await LoadInitialValues(id);
+        }
+    }
+
+    public async Task SubmitForm()
+    {
+        if (string.IsNullOrEmpty(id))
+            await Add();
+        else
+            await Edit();
+    }
+
+    private async Task Add()
+    {
+        var response = await httpClient.PostAsJsonAsync("api/users", User);
+        if (response.IsSuccessStatusCode)
+        {
+            await response.Content.ReadAsStringAsync();
+            navigationManager.NavigateTo("/users");
+        }
+    }
+
+    private async Task Edit()
+    {
+        var response = await httpClient.PutAsJsonAsync("api/users", User);
+        if (response.IsSuccessStatusCode)
+        {
+            await response.Content.ReadAsStringAsync();
+            navigationManager.NavigateTo("/users");
+        }
+    }
+
+    private async Task LoadInitialValues()
+    {
+        People = await httpClient.GetFromJsonAsync<IEnumerable<PersonDto>>("api/users/people")
+        ?? Enumerable.Empty<PersonDto>();
+
+        Roles = await httpClient.GetFromJsonAsync<IEnumerable<RoleDto>>("api/roles")
+        ?? Enumerable.Empty<RoleDto>();
+    }
+
+    private async Task LoadInitialValues(string id)
+    {
+        var response = await httpClient
+        .GetFromJsonAsync<IEnumerable<UserDto>>($"api/users/{id}");
+
+        User = response?.FirstOrDefault() ?? new UserDto();
+    }
+}

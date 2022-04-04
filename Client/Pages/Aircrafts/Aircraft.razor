@@ -1,0 +1,82 @@
+@page "/aircrafts"
+@inject HttpClient httpClient
+@inject IJSRuntime jsRuntime
+@inject NavigationManager navigationManager
+
+<section class="title-section">
+    <h3>Aviones</h3>
+    <button class="btn btn-sm btn-success" @onclick="Add">Agregar nuevo</button>
+</section>
+<hr />
+
+<table class="table">
+    <thead>
+        <tr>
+            <th scope="col">Descripción</th>
+            <th scope="col">Tipo</th>
+            <th scope="col">Acciones</th>
+        </tr>
+    </thead>
+    <tbody>
+        @if (!Aircrafts.Any())
+        {
+            <text>No existen registros que mostrar.</text>
+        }
+        else
+        {
+            @foreach (var aircraft in Aircrafts)
+            {
+                <tr>
+                    <td>@aircraft.Description</td>
+                    <td>@aircraft.TypeDescription</td>
+                    <td>
+                        <span class="icon fa-solid fa-trash-can" aria-hidden="true"
+                        @onclick=@(() => Delete(aircraft.AircraftId))></span>
+                        <span class="icon fa-solid fa-pencil" aria-hidden="true"
+                        @onclick=@(() => Edit(aircraft.AircraftId))></span>
+                    </td>
+                </tr>
+            }
+        }
+    </tbody>
+</table>
+
+@code {
+    public Aircraft()
+    {
+        Aircrafts = new List<AircraftWithDescriptionDto>();
+    }
+
+    private IEnumerable<AircraftWithDescriptionDto> Aircrafts { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadInitialValues();
+    }
+
+    private void Add()
+    {
+        navigationManager.NavigateTo($"/aircrafts/add");
+    }
+
+    private void Edit(string id)
+    {
+        navigationManager.NavigateTo($"/aircrafts/add/{id}");
+    }
+
+    private async Task Delete(string id)
+    {
+        if (!await jsRuntime.InvokeAsync<bool>("confirm",
+        "¿Esta seguro que desea eliminar el avión?"))
+            return;
+
+        await httpClient.DeleteAsync($"api/aircrafts/{id}");
+        await LoadInitialValues();
+    }
+
+    private async Task LoadInitialValues()
+    {
+        Aircrafts = await httpClient.GetFromJsonAsync<IEnumerable<AircraftWithDescriptionDto>>("api/aircrafts")
+        ?? Enumerable.Empty<AircraftWithDescriptionDto>();
+    }
+}

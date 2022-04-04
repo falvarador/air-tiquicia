@@ -1,0 +1,83 @@
+@page "/person-types"
+
+@inject HttpClient httpClient
+@inject IJSRuntime jsRuntime
+@inject NavigationManager navigationManager
+
+<section class="title-section">
+    <h3>Tipos de personas</h3>
+    <button class="btn btn-sm btn-success" @onclick="Add">Agregar nuevo</button>
+</section>
+<hr />
+
+<table class="table">
+    <thead>
+        <tr>
+            <th scope="col">Individuo</th>
+            <th scope="col">Tipo</th>
+            <th scope="col">Acciones</th>
+        </tr>
+    </thead>
+    <tbody>
+        @if (!PersonTypes.Any())
+        {
+            <text>No existen registros que mostrar.</text>
+        }
+        else 
+        {
+            @foreach (var personType in PersonTypes)
+            {
+                <tr>
+                    <td>@personType.PersonFullName</td>
+                    <td>@personType.Type.ToEnumName()</td>
+                    <td>
+                        <span class="icon fa-solid fa-trash-can" aria-hidden="true"
+                        @onclick=@(() => Delete(personType.PersonTypeId))></span>
+                        <span class="icon fa-solid fa-pencil" aria-hidden="true"
+                        @onclick=@(() => Edit(personType.PersonTypeId))></span>
+                    </td>
+                </tr>
+            }
+        }
+    </tbody>
+</table>
+
+@code {
+    public PersonType()
+    {
+        PersonTypes = new List<PersonTypeWithDescriptionDto>();
+    }
+
+    private IEnumerable<PersonTypeWithDescriptionDto> PersonTypes { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadInitialValues();
+    }
+
+    private void Add()
+    {
+        navigationManager.NavigateTo($"/person-types/add");
+    }
+
+    private void Edit(int id)
+    {
+        navigationManager.NavigateTo($"/person-types/add/{id}");
+    }
+
+    private async Task Delete(int id)
+    {
+        if (!await jsRuntime.InvokeAsync<bool>("confirm",
+        "¿Esta seguro que desea eliminar el tipo de persona?"))
+            return;
+
+        await httpClient.DeleteAsync($"api/person-types/{id}");
+        await LoadInitialValues();
+    }
+
+    private async Task LoadInitialValues()
+    {
+        PersonTypes = await httpClient.GetFromJsonAsync<IEnumerable<PersonTypeWithDescriptionDto>>("api/person-types")
+        ?? Enumerable.Empty<PersonTypeWithDescriptionDto>();
+    }
+}

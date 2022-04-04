@@ -1,0 +1,86 @@
+@page "/flights"
+
+@inject HttpClient httpClient
+@inject IJSRuntime jsRuntime
+@inject NavigationManager navigationManager
+
+<section class="title-section">
+    <h3>Vuelos</h3>
+    <button class="btn btn-sm btn-success" @onclick="Add">Agregar nuevo</button>
+</section>
+<hr />
+
+<table class="table">
+    <thead>
+        <tr>
+            <th scope="col">Descripción</th>
+            <th scope="col">Acciones</th>
+        </tr>
+    </thead>
+    <tbody>
+        @if (!Flights.Any())
+        {
+            <text>No existen registros que mostrar.</text>
+        }
+        else 
+        {
+            @foreach (var flight in Flights)
+            {
+                <tr>
+                    <td>@flight.Number</td>
+                    <td>@flight.DurationHours - @flight.DurationMinutes</td>
+                    <td>@flight.DepartureDate</td>
+                    <td>@flight.ArrivalDate</td>
+                    <td>@flight.DepartureHours - @flight.DepartureMinutes</td>
+                    <td>@flight.ArrivalHours - @flight.ArrivalMinutes</td>
+                    <td>
+                        <span class="icon fa-solid fa-trash-can" aria-hidden="true"
+                        @onclick=@(() => Delete(flight.Number))></span>
+                        <span class="icon fa-solid fa-pencil" aria-hidden="true"
+                        @onclick=@(() => Edit(flight.Number))></span>
+                    </td>
+                </tr>
+            }
+        }
+    </tbody>
+</table>
+
+@code {
+    public Flight()
+    {
+        Flights = new List<FlightDto>();
+    }
+
+    private IEnumerable<FlightDto> Flights { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadInitialValues();
+    }
+
+    private void Add()
+    {
+        navigationManager.NavigateTo($"/flights/add");
+    }
+
+    private void Edit(string id)
+    {
+        navigationManager.NavigateTo($"/flights/add/{id}");
+    }
+
+    private async Task Delete(string id)
+    {
+        if (!await jsRuntime.InvokeAsync<bool>("confirm",
+        "¿Esta seguro que desea eliminar el vuelo?"))
+            return;
+
+        await httpClient.DeleteAsync($"api/flights/{id}");
+        await LoadInitialValues();
+    }
+
+    private async Task LoadInitialValues()
+    {
+        Flights = await httpClient.GetFromJsonAsync<IEnumerable<FlightDto>>("api/flights")
+        ?? Enumerable.Empty<FlightDto>();
+    }
+}

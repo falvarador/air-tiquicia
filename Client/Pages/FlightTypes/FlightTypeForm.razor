@@ -1,0 +1,79 @@
+@page "/flight-types/add"
+@page "/flight-types/add/{id}"
+
+@inject HttpClient httpClient
+@inject NavigationManager navigationManager
+
+<EditForm Model="FlightType" OnValidSubmit="SubmitForm">
+    <section class="title-section">
+        <h3>Tipo de vuelo</h3>
+        <button class="btn btn-sm btn-success" type="submit">
+            @(string.IsNullOrEmpty(id) ? "Agregar" : "Editar")
+        </button>
+    </section>
+    <hr />
+
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    <aside class="mb-3">
+        <label for="description" class="form-label">Descripción</label>
+        <input autocomplete="off" type="text" class="form-control" id="description" @bind="FlightType.Description" />
+    </aside>
+</EditForm>
+
+@code {
+    [Parameter]
+    public string id { get; set; }
+    private FlightTypeDto FlightType { get; set; }
+
+    public FlightTypeForm()
+    {
+        id = string.Empty;
+        FlightType = new FlightTypeDto();
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!string.IsNullOrEmpty(id))
+        {
+            await LoadInitialValues(id);
+        }
+    }
+
+    public async Task SubmitForm()
+    {
+        if (string.IsNullOrEmpty(id))
+            await Add();
+        else
+            await Edit();
+    }
+
+    private async Task Add()
+    {
+        var response = await httpClient.PostAsJsonAsync("api/flight-types", FlightType);
+        if (response.IsSuccessStatusCode)
+        {
+            await response.Content.ReadAsStringAsync();
+            navigationManager.NavigateTo("/flight-types");
+        }
+    }
+
+    private async Task Edit()
+    {
+        var response = await httpClient.PutAsJsonAsync("api/flight-types", FlightType);
+        if (response.IsSuccessStatusCode)
+        {
+            await response.Content.ReadAsStringAsync();
+            navigationManager.NavigateTo("/flight-types");
+        }
+    }
+
+    private async Task LoadInitialValues(string id)
+    {
+        var response = await httpClient
+        .GetFromJsonAsync<IEnumerable<FlightTypeDto>>($"api/flight-types/{id}");
+
+        FlightType = response?.FirstOrDefault() ?? new FlightTypeDto();
+    }
+}

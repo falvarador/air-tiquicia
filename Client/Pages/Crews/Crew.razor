@@ -1,0 +1,81 @@
+@page "/crews"
+
+@inject HttpClient httpClient
+@inject IJSRuntime jsRuntime
+@inject NavigationManager navigationManager
+
+<section class="title-section">
+    <h3>Tripulación</h3>
+    <button class="btn btn-sm btn-success" @onclick="Add">Agregar nuevo</button>
+</section>
+<hr />
+
+<table class="table">
+    <thead>
+        <tr>
+            <th scope="col">Descipción</th>
+            <th scope="col">Acciones</th>
+        </tr>
+    </thead>
+    <tbody>
+        @if (!Crews.Any())
+        {
+            <text>No existen registros que mostrar.</text>
+        }
+        else 
+        {
+            @foreach (var role in Crews)
+            {
+                <tr>
+                    <td>@role.Description</td>
+                    <td>
+                        <span class="icon fa-solid fa-trash-can" aria-hidden="true"
+                        @onclick=@(() => Delete(role.CrewId))></span>
+                        <span class="icon fa-solid fa-pencil" aria-hidden="true"
+                        @onclick=@(() => Edit(role.CrewId))></span>
+                    </td>
+                </tr>
+            }
+        }
+    </tbody>
+</table>
+
+@code {
+    public Crew()
+    {
+        Crews = new List<CrewDto>();
+    }
+
+    private IEnumerable<CrewDto> Crews { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadInitialValues();
+    }
+
+    private void Add()
+    {
+        navigationManager.NavigateTo($"/crews/add");
+    }
+
+    private void Edit(string id)
+    {
+        navigationManager.NavigateTo($"/crews/add/{id}");
+    }
+
+    private async Task Delete(string id)
+    {
+        if (!await jsRuntime.InvokeAsync<bool>("confirm",
+        "¿Esta seguro que desea eliminar la descripción?"))
+            return;
+
+        await httpClient.DeleteAsync($"api/crews/{id}");
+        await LoadInitialValues();
+    }
+
+    private async Task LoadInitialValues()
+    {
+        Crews = await httpClient.GetFromJsonAsync<IEnumerable<CrewDto>>("api/crews")
+        ?? Enumerable.Empty<CrewDto>();
+    }
+}

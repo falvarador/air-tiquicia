@@ -1,0 +1,79 @@
+@page "/roles/add"
+@page "/roles/add/{id}"
+
+@inject HttpClient httpClient
+@inject NavigationManager navigationManager
+
+<EditForm Model="Role" OnValidSubmit="SubmitForm">
+    <section class="title-section">
+        <h3>Rol</h3>
+        <button class="btn btn-sm btn-success" type="submit">
+            @(string.IsNullOrEmpty(id) ? "Agregar" : "Editar")
+        </button>
+    </section>
+    <hr />
+
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    <aside class="mb-3">
+        <label for="name" class="form-label">Name</label>
+        <input autocomplete="off" type="text" class="form-control" id="name" @bind="Role.Name" />
+    </aside>
+</EditForm>
+
+@code {
+    [Parameter]
+    public string id { get; set; }
+    private RoleDto Role { get; set; }
+
+    public RoleForm()
+    {
+        id = string.Empty;
+        Role = new RoleDto();
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!string.IsNullOrEmpty(id))
+        {
+            await LoadInitialValues(id);
+        }
+    }
+
+    public async Task SubmitForm()
+    {
+        if (string.IsNullOrEmpty(id))
+            await Add();
+        else
+            await Edit();
+    }
+
+    private async Task Add()
+    {
+        var response = await httpClient.PostAsJsonAsync("api/roles", Role);
+        if (response.IsSuccessStatusCode)
+        {
+            await response.Content.ReadAsStringAsync();
+            navigationManager.NavigateTo("/roles");
+        }
+    }
+
+    private async Task Edit()
+    {
+        var response = await httpClient.PutAsJsonAsync("api/roles", Role);
+        if (response.IsSuccessStatusCode)
+        {
+            await response.Content.ReadAsStringAsync();
+            navigationManager.NavigateTo("/roles");
+        }
+    }
+
+    private async Task LoadInitialValues(string id)
+    {
+        var response = await httpClient
+        .GetFromJsonAsync<IEnumerable<RoleDto>>($"api/roles/{id}");
+
+        Role = response?.FirstOrDefault() ?? new RoleDto();
+    }
+}

@@ -1,0 +1,89 @@
+@page "/people"
+
+@inject HttpClient httpClient
+@inject IJSRuntime jsRuntime
+@inject NavigationManager navigationManager
+
+<section class="title-section">
+    <h3>Individuos</h3>
+    <button class="btn btn-sm btn-success" @onclick="Add">Agregar nuevo</button>
+</section>
+<hr />
+
+<table class="table">
+    <thead>
+        <tr>
+            <th scope="col">Nombre</th>
+            <th scope="col">Apellidos</th>
+            <th scope="col">Teléfono</th>
+            <th scope="col">Correo electrónico</th>
+            <th scope="col">Dirección</th>
+            <th scope="col">Acciones</th>
+        </tr>
+    </thead>
+    <tbody>
+        @if (!People.Any())
+        {
+            <text>No existen registros que mostrar.</text>
+        }
+        else 
+        {
+            @foreach (var person in People)
+            {
+                <tr>
+                    <td>@person.Name</td>
+                    <td>@person.LastName</td>
+                    <td>@person.Telephone</td>
+                    <td>@person.Email</td>
+                    <td>@((person.Direction.Length > 25) ? $"{person.Direction.Substring(0, 25)}..." : person.Direction)</td>
+                    <td>
+                        <span class="icon fa-solid fa-trash-can" aria-hidden="true"
+                        @onclick=@(() => Delete(person.PersonId))></span>
+                        <span class="icon fa-solid fa-pencil" aria-hidden="true"
+                        @onclick=@(() => Edit(person.PersonId))></span>
+                    </td>
+                </tr>
+            }
+        }
+    </tbody>
+</table>
+
+@code {
+    public Person()
+    {
+        People = new List<PersonDto>();
+    }
+
+    private IEnumerable<PersonDto> People { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadInitialValues();
+    }
+
+    private void Add()
+    {
+        navigationManager.NavigateTo($"/people/add");
+    }
+
+    private void Edit(string id)
+    {
+        navigationManager.NavigateTo($"/people/add/{id}");
+    }
+
+    private async Task Delete(string id)
+    {
+        if (!await jsRuntime.InvokeAsync<bool>("confirm",
+        "¿Esta seguro que desea eliminar el individuo?"))
+            return;
+
+        await httpClient.DeleteAsync($"api/people/{id}");
+        await LoadInitialValues();
+    }
+
+    private async Task LoadInitialValues()
+    {
+        People = await httpClient.GetFromJsonAsync<IEnumerable<PersonDto>>("api/people")
+        ?? Enumerable.Empty<PersonDto>();
+    }
+}

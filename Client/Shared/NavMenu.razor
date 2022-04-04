@@ -1,0 +1,84 @@
+﻿<div class="top-row ps-3 navbar navbar-dark">
+    <div class="container-fluid">
+        <NavLink class="navbar-brand" href="" Match="NavLinkMatch.All">Air Tiquicia</NavLink>
+        <button title="Navigation menu" class="navbar-toggler" @onclick="ToggleNavMenu">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+    </div>
+</div>
+
+<div class="@NavMenuCssClass" @onclick="ToggleNavMenu">
+    <nav class="flex-column">
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="aircrafts">
+                <span class="icon fa-solid fa-plane" aria-hidden="true"></span> Aviones
+            </NavLink>
+        </div>
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="aircraft-types">
+                <span class="icon fa-solid fa-plane-up" aria-hidden="true"></span> Tipos de Aviones
+            </NavLink>
+        </div>
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="baggages-weight">
+                <span class="icon fa-solid fa-cart-flatbed-suitcase" aria-hidden="true"></span> Peso de maletas
+            </NavLink>
+        </div>
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="crews">
+                <span class="icon fa-solid fa-person-military-pointing" aria-hidden="true"></span> Tripulación
+            </NavLink>
+        </div>
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="destinations">
+                <span class="icon fa-solid fa-map-location-dot" aria-hidden="true"></span> Destinos
+            </NavLink>
+        </div>
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="flights">
+                <span class="icon fa-solid fa-plane-departure" aria-hidden="true"></span> Vuelos
+            </NavLink>
+        </div>
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="flight-types">
+                <span class="icon fa-solid  fa-plane-circle-exclamation" aria-hidden="true"></span> Tipos de vuelos
+            </NavLink>
+        </div>
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="passengers">
+                <span class="icon fa-solid fa-people-line" aria-hidden="true"></span> Pasajeros
+            </NavLink>
+        </div>
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="people">
+                <span class="icon fa-solid fa-people-group" aria-hidden="true"></span> Personas
+            </NavLink>
+        </div>
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="person-types">
+                <span class="icon fa-solid fa-person-circle-exclamation" aria-hidden="true"></span> Tipos de personas
+            </NavLink>
+        </div>
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="roles">
+                <span class="icon fa-solid fa-users-gear" aria-hidden="true"></span> Roles
+            </NavLink>
+        </div>
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="users">
+                <span class="icon fa-solid fa-user" aria-hidden="true"></span> Usuarios
+            </NavLink>
+        </div>
+    </nav>
+</div>
+
+@code {
+    private bool collapseNavMenu = true;
+
+    private string? NavMenuCssClass => collapseNavMenu ? "collapse" : null;
+
+    private void ToggleNavMenu()
+    {
+        collapseNavMenu = !collapseNavMenu;
+    }
+}

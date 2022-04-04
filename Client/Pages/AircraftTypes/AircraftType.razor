@@ -1,0 +1,85 @@
+@page "/aircraft-types"
+
+@inject HttpClient httpClient
+@inject IJSRuntime jsRuntime
+@inject NavigationManager navigationManager
+
+<section class="title-section">
+    <h3>Tipos de aviones</h3>
+    <button class="btn btn-sm btn-success" @onclick="Add">Agregar nuevo</button>
+</section>
+<hr />
+
+<table class="table">
+    <thead>
+        <tr>
+            <th scope="col">Descripción</th>
+            <th scope="col">Filas</th>
+            <th scope="col">Asientos</th>
+            <th scope="col">Acciones</th>
+        </tr>
+    </thead>
+    <tbody>
+        @if (!AircraftTypes.Any())
+        {
+            <text>No existen registros que mostrar.</text>
+        }
+        else 
+        {
+            @foreach (var aircraftType in AircraftTypes)
+            {
+                <tr>
+                    <td>@aircraftType.Description</td>
+                    <td>@aircraftType.Rows</td>
+                    <td>@aircraftType.Seats</td>
+                    <td>
+                        <span class="icon fa-solid fa-trash-can" aria-hidden="true"
+                        @onclick=@(() => Delete(aircraftType.TypeId))></span>
+                        <span class="icon fa-solid fa-pencil" aria-hidden="true"
+                        @onclick=@(() => Edit(aircraftType.TypeId))></span>
+                    </td>
+                </tr>
+            }
+        }
+    </tbody>
+</table>
+
+@code {
+    public AircraftType()
+    {
+        AircraftTypes = new List<AircraftTypeDto>();
+    }
+
+    private IEnumerable<AircraftTypeDto> AircraftTypes { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadInitialValues();
+    }
+
+    private void Add()
+    {
+        navigationManager.NavigateTo($"/aircraft-types/add");
+    }
+
+    private void Edit(string id)
+    {
+        navigationManager.NavigateTo($"/aircraft-types/add/{id}");
+    }
+
+    private async Task Delete(string id)
+    {
+        if (!await jsRuntime.InvokeAsync<bool>("confirm",
+        "¿Esta seguro que desea eliminar el tipo de avión?"))
+            return;
+
+        await httpClient.DeleteAsync($"api/aircraft-types/{id}");
+        await LoadInitialValues();
+    }
+
+    private async Task LoadInitialValues()
+    {
+        AircraftTypes = await httpClient.GetFromJsonAsync<IEnumerable<AircraftTypeDto>>("api/aircraft-types")
+        ?? Enumerable.Empty<AircraftTypeDto>();
+    }
+}

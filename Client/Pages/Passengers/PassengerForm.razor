@@ -1,0 +1,102 @@
+@page "/passengers/add"
+@page "/passengers/add/{id}"
+
+@inject HttpClient httpClient
+@inject NavigationManager navigationManager
+
+<EditForm Model="Passenger" OnValidSubmit="SubmitForm">
+    <section class="title-section">
+        <h3>Pasajero</h3>
+        <button class="btn btn-sm btn-success" type="submit">
+            @(string.IsNullOrEmpty(id) ? "Agregar" : "Editar")
+        </button>
+    </section>
+    <hr />
+
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    <aside class="mb-3">
+        <label for="person" class="form-label">Individuo</label>
+        <InputSelect class="form-select" id="person" aria-label="Person select" @bind-Value="Passenger.PersonId">
+            <option value=null>Selecciona una opción</option>
+            @foreach (var person in People)
+            {
+                <option value="@person.PersonId">@person.Name @person.LastName</option>
+            }
+        </InputSelect>
+    </aside>
+    <aside class="mb-3">
+        <label for="quantity-baggage" class="form-label">Cantidad de equipaje</label>
+        <input autocomplete="off" type="number" class="form-control" id="quantity-baggage"
+            @bind="Passenger.QuantityBaggage" />
+    </aside>
+</EditForm>
+
+@code {
+    [Parameter]
+    public string id { get; set; }
+    private PassengerDto Passenger { get; set; }
+
+    private IEnumerable<PersonDto> People { get; set; }
+
+    public PassengerForm()
+    {
+        id = string.Empty;
+        Passenger = new PassengerDto();
+
+        People = new List<PersonDto>();
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadInitialValues();
+
+        if (!string.IsNullOrEmpty(id))
+        {
+            await LoadInitialValues(id);
+        }
+    }
+
+    public async Task SubmitForm()
+    {
+        if (string.IsNullOrEmpty(id))
+            await Add();
+        else
+            await Edit();
+    }
+
+    private async Task Add()
+    {
+        var response = await httpClient.PostAsJsonAsync("api/passengers", Passenger);
+        if (response.IsSuccessStatusCode)
+        {
+            await response.Content.ReadAsStringAsync();
+            navigationManager.NavigateTo("/passengers");
+        }
+    }
+
+    private async Task Edit()
+    {
+        var response = await httpClient.PutAsJsonAsync("api/passengers", Passenger);
+        if (response.IsSuccessStatusCode)
+        {
+            await response.Content.ReadAsStringAsync();
+            navigationManager.NavigateTo("/passengers");
+        }
+    }
+
+    private async Task LoadInitialValues()
+    {
+        People = await httpClient.GetFromJsonAsync<IEnumerable<PersonDto>>("api/passengers/people")
+        ?? Enumerable.Empty<PersonDto>();
+    }
+
+    private async Task LoadInitialValues(string id)
+    {
+        var response = await httpClient
+        .GetFromJsonAsync<IEnumerable<PassengerDto>>($"api/passengers/{id}");
+
+        Passenger = response?.FirstOrDefault() ?? new PassengerDto();
+    }
+}

@@ -1,0 +1,179 @@
+@page "/flights/add"
+@page "/flights/add/{id}"
+
+@inject HttpClient httpClient
+@inject NavigationManager navigationManager
+
+<EditForm Model="Flight" OnValidSubmit="SubmitForm">
+    <section class="title-section">
+        <h3>Tipos de vuelos</h3>
+        <button class="btn btn-sm btn-success" type="submit">
+            @(string.IsNullOrEmpty(id) ? "Agregar" : "Editar")
+        </button>
+    </section>
+    <hr />
+
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    <aside class="mb-3">
+        <label for="number" class="form-label">Número</label>
+        <input autocomplete="off" type="text" class="form-control" id="number" @bind="Flight.Number" />
+    </aside>
+    <aside class="mb-3">
+        <label for="aircraft" class="form-label">Avión</label>
+        <InputSelect class="form-select" id="aircraft" aria-label="Aircraft select" @bind-Value="Flight.AircraftId">
+            <option value=null>Selecciona una opción</option>
+            @foreach (var aircraft in Aircrafts)
+            {
+                <option value="@aircraft.AircraftId">@aircraft.Description</option>
+            }
+        </InputSelect>
+    </aside>
+    <aside class="mb-3">
+        <label for="flight-type" class="form-label">Tipo de vuelo</label>
+        <InputSelect class="form-select" id="flight-type" aria-label="Flight type select"
+            @bind-Value="Flight.FlightTypeId">
+            <option value=null>Selecciona una opción</option>
+            @foreach (var flightType in FlightTypes)
+            {
+                <option value="@flightType.FlightTypeId">@flightType.Description</option>
+            }
+        </InputSelect>
+    </aside>
+    <aside class="mb-3">
+        <label for="departure-destination" class="form-label">Desde</label>
+        <InputSelect class="form-select" id="departure-destination" aria-label="Departure destination select"
+            @bind-Value="Flight.DepartureDestinationId">
+            <option value=null>Selecciona una opción</option>
+            @foreach (var destination in Destinations)
+            {
+                <option value="@destination.DestinationId">@destination.Name, @destination.Location</option>
+            }
+        </InputSelect>
+    </aside>
+    <aside class="mb-3">
+        <label for="arrival-destination" class="form-label">Hacia</label>
+        <InputSelect class="form-select" id="arrival-destination" aria-label="Arrival destination select"
+            @bind-Value="Flight.ArrivalDestinationId">
+            <option value=null>Selecciona una opción</option>
+            @foreach (var destination in Destinations)
+            {
+                <option value="@destination.DestinationId">@destination.Name, @destination.Location</option>
+            }
+        </InputSelect>
+    </aside>
+    <aside class="mb-3">
+        <label for="duration-hours" class="form-label">Duración (Horas)</label>
+        <input autocomplete="off" type="number" class="form-control" id="duration-hours" @bind="Flight.DurationHours" />
+    </aside>
+    <aside class="mb-3">
+        <label for="duration-minutes" class="form-label">Duración (Minutos)</label>
+        <input autocomplete="off" type="number" class="form-control" id="duration-minutes"
+            @bind="Flight.DurationMinutes" />
+    </aside>
+    <aside class="mb-3">
+        <label for="departure-date" class="form-label">Fecha de salida</label>
+        <input autocomplete="off" type="date" class="form-control" id="departure-date" @bind="Flight.DepartureDate" />
+    </aside>
+    <aside class="mb-3">
+        <label for="arrival-date" class="form-label">Fecha de llegada</label>
+        <input autocomplete="off" type="date" class="form-control" id="arrival-date" @bind="Flight.ArrivalDate" />
+    </aside>
+    <aside class="mb-3">
+        <label for="departure-hours" class="form-label">Salida (Hora)</label>
+        <input autocomplete="off" type="number" class="form-control" id="departure-hours"
+            @bind="Flight.DepartureHours" />
+    </aside>
+    <aside class="mb-3">
+        <label for="departure-minutes" class="form-label">Salida (Minutos)</label>
+        <input autocomplete="off" type="number" class="form-control" id="departure-minutes"
+            @bind="Flight.DepartureMinutes" />
+    </aside>
+    <aside class="mb-3">
+        <label for="arrival-hours" class="form-label">Llegada (Hora)</label>
+        <input autocomplete="off" type="number" class="form-control" id="arrival-hours" @bind="Flight.ArrivalHours" />
+    </aside>
+    <aside class="mb-3">
+        <label for="arrival-minutes" class="form-label">Llegada (Minutos)</label>
+        <input autocomplete="off" type="number" class="form-control" id="arrival-minutes"
+            @bind="Flight.ArrivalMinutes" />
+    </aside>
+</EditForm>
+
+@code {
+    [Parameter]
+    public string id { get; set; }
+    private FlightDto Flight { get; set; }
+    private IEnumerable<AircraftDto> Aircrafts { get; set; }
+    private IEnumerable<FlightTypeDto> FlightTypes { get; set; }
+    private IEnumerable<DestinationDto> Destinations { get; set; }
+
+    public FlightForm()
+    {
+        id = string.Empty;
+        Flight = new FlightDto();
+
+        Aircrafts = new List<AircraftDto>();
+        FlightTypes = new List<FlightTypeDto>();
+        Destinations = new List<DestinationDto>();
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadInitialValues();
+
+        if (!string.IsNullOrEmpty(id))
+        {
+            await LoadInitialValues(id);
+        }
+    }
+
+    public async Task SubmitForm()
+    {
+        if (string.IsNullOrEmpty(id))
+            await Add();
+        else
+            await Edit();
+    }
+
+    private async Task Add()
+    {
+        var response = await httpClient.PostAsJsonAsync("api/flights", Flight);
+        if (response.IsSuccessStatusCode)
+        {
+            await response.Content.ReadAsStringAsync();
+            navigationManager.NavigateTo("/flights");
+        }
+    }
+
+    private async Task Edit()
+    {
+        var response = await httpClient.PutAsJsonAsync("api/flights", Flight);
+        if (response.IsSuccessStatusCode)
+        {
+            await response.Content.ReadAsStringAsync();
+            navigationManager.NavigateTo("/flights");
+        }
+    }
+
+    private async Task LoadInitialValues()
+    {
+        Aircrafts = await httpClient.GetFromJsonAsync<IEnumerable<AircraftDto>>("api/aircrafts")
+        ?? Enumerable.Empty<AircraftDto>();
+
+        FlightTypes = await httpClient.GetFromJsonAsync<IEnumerable<FlightTypeDto>>("api/flight-types")
+        ?? Enumerable.Empty<FlightTypeDto>();
+
+        Destinations = await httpClient.GetFromJsonAsync<IEnumerable<DestinationDto>>("api/destinations")
+        ?? Enumerable.Empty<DestinationDto>();
+    }
+
+    private async Task LoadInitialValues(string id)
+    {
+        var response = await httpClient
+        .GetFromJsonAsync<IEnumerable<FlightDto>>($"api/flights/{id}");
+
+        Flight = response?.FirstOrDefault() ?? new FlightDto();
+    }
+}

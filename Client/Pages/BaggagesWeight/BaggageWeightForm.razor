@@ -1,0 +1,83 @@
+@page "/baggages-weight/add"
+@page "/baggages-weight/add/{id}"
+
+@inject HttpClient httpClient
+@inject NavigationManager navigationManager
+
+<EditForm Model="BaggageWeight" OnValidSubmit="SubmitForm">
+    <section class="title-section">
+        <h3>Peso por equipaje</h3>
+        <button class="btn btn-sm btn-success" type="submit">
+            @(string.IsNullOrEmpty(id) ? "Agregar" : "Editar")
+        </button>
+    </section>
+    <hr />
+
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    <aside class="mb-3">
+        <label for="weight" class="form-label">Peso</label>
+        <input autocomplete="off" type="number" class="form-control" id="weight" @bind="BaggageWeight.Weight" />
+    </aside>
+    <aside class="mb-3">
+        <label for="price" class="form-label">Precio</label>
+        <input autocomplete="off" type="number" class="form-control" id="price" @bind="BaggageWeight.Price" />
+    </aside>
+</EditForm>
+
+@code {
+    [Parameter]
+    public string id { get; set; }
+    private BaggageWeightDto BaggageWeight { get; set; }
+
+    public BaggageWeightForm()
+    {
+        id = string.Empty;
+        BaggageWeight = new BaggageWeightDto();
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!string.IsNullOrEmpty(id))
+        {
+            await LoadInitialValues(id);
+        }
+    }
+
+    public async Task SubmitForm()
+    {
+        if (string.IsNullOrEmpty(id))
+            await Add();
+        else
+            await Edit();
+    }
+
+    private async Task Add()
+    {
+        var response = await httpClient.PostAsJsonAsync("api/baggages-weight", BaggageWeight);
+        if (response.IsSuccessStatusCode)
+        {
+            await response.Content.ReadAsStringAsync();
+            navigationManager.NavigateTo("/baggages-weight");
+        }
+    }
+
+    private async Task Edit()
+    {
+        var response = await httpClient.PutAsJsonAsync("api/baggages-weight", BaggageWeight);
+        if (response.IsSuccessStatusCode)
+        {
+            await response.Content.ReadAsStringAsync();
+            navigationManager.NavigateTo("/baggages-weight");
+        }
+    }
+
+    private async Task LoadInitialValues(string id)
+    {
+        var response = await httpClient
+        .GetFromJsonAsync<IEnumerable<BaggageWeightDto>>($"api/baggages-weight/{id}");
+
+        BaggageWeight = response?.FirstOrDefault() ?? new BaggageWeightDto();
+    }
+}

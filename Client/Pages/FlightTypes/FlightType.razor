@@ -1,0 +1,81 @@
+@page "/flight-types"
+
+@inject HttpClient httpClient
+@inject IJSRuntime jsRuntime
+@inject NavigationManager navigationManager
+
+<section class="title-section">
+    <h3>Tipos de vuelos</h3>
+    <button class="btn btn-sm btn-success" @onclick="Add">Agregar nuevo</button>
+</section>
+<hr />
+
+<table class="table">
+    <thead>
+        <tr>
+            <th scope="col">Descripción</th>
+            <th scope="col">Acciones</th>
+        </tr>
+    </thead>
+    <tbody>
+        @if (!FlightTypes.Any())
+        {
+            <text>No existen registros que mostrar.</text>
+        }
+        else 
+        {
+            @foreach (var flightType in FlightTypes)
+            {
+                <tr>
+                    <td>@flightType.Description</td>
+                    <td>
+                        <span class="icon fa-solid fa-trash-can" aria-hidden="true"
+                        @onclick=@(() => Delete(flightType.FlightTypeId))></span>
+                        <span class="icon fa-solid fa-pencil" aria-hidden="true"
+                        @onclick=@(() => Edit(flightType.FlightTypeId))></span>
+                    </td>
+                </tr>
+            }
+        }
+    </tbody>
+</table>
+
+@code {
+    public FlightType()
+    {
+        FlightTypes = new List<FlightTypeDto>();
+    }
+
+    private IEnumerable<FlightTypeDto> FlightTypes { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadInitialValues();
+    }
+
+    private void Add()
+    {
+        navigationManager.NavigateTo($"/flight-types/add");
+    }
+
+    private void Edit(int id)
+    {
+        navigationManager.NavigateTo($"/flight-types/add/{id}");
+    }
+
+    private async Task Delete(int id)
+    {
+        if (!await jsRuntime.InvokeAsync<bool>("confirm",
+        "¿Esta seguro que desea eliminar el tipo de vuelo?"))
+            return;
+
+        await httpClient.DeleteAsync($"api/flight-types/{id}");
+        await LoadInitialValues();
+    }
+
+    private async Task LoadInitialValues()
+    {
+        FlightTypes = await httpClient.GetFromJsonAsync<IEnumerable<FlightTypeDto>>("api/flight-types")
+        ?? Enumerable.Empty<FlightTypeDto>();
+    }
+}

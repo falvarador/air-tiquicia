@@ -1,0 +1,105 @@
+@page "/person-types/add"
+@page "/person-types/add/{id}"
+
+@inject HttpClient httpClient
+@inject NavigationManager navigationManager
+
+<EditForm Model="PersonType" OnValidSubmit="SubmitForm">
+    <section class="title-section">
+        <h3>Tipo de persona</h3>
+        <button class="btn btn-sm btn-success" type="submit">
+            @(string.IsNullOrEmpty(id) ? "Agregar" : "Editar")
+        </button>
+    </section>
+    <hr />
+
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    <aside class="mb-3">
+        <label for="person" class="form-label">Individuo</label>
+        <InputSelect class="form-select" id="person" aria-label="Person select" @bind-Value="PersonType.PersonId">
+            <option value=null>Selecciona una opción</option>
+            @foreach (var person in People)
+            {
+                <option value="@person.PersonId">@person.Name @person.LastName</option>
+            }
+        </InputSelect>
+    </aside>
+    <aside class="mb-3">
+        <label for="person" class="form-label">Tipo de persona</label>
+        <InputSelect class="form-select" id="person" aria-label="Person select" @bind-Value="PersonType.Type">
+            @foreach (PersonTypeEnum personType in Enum.GetValues(typeof(PersonTypeEnum)))
+            {
+                <option value=@personType>@personType.ToEnumName()</option>
+            }
+        </InputSelect>
+    </aside>
+</EditForm>
+
+@code {
+    [Parameter]
+    public string id { get; set; }
+    private PersonTypeDto PersonType { get; set; }
+    private IEnumerable<PersonDto> People { get; set; }
+
+    public PersonTypeForm()
+    {
+        id = string.Empty;
+        PersonType = new PersonTypeDto();
+
+        People = new List<PersonDto>();
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadInitialValues();
+
+        if (!string.IsNullOrEmpty(id))
+        {
+            await LoadInitialValues(id);
+        }
+    }
+
+    public async Task SubmitForm()
+    {
+        if (string.IsNullOrEmpty(id))
+            await Add();
+        else
+            await Edit();
+    }
+
+    private async Task Add()
+    {
+        var response = await httpClient.PostAsJsonAsync("api/person-types", PersonType);
+        if (response.IsSuccessStatusCode)
+        {
+            await response.Content.ReadAsStringAsync();
+            navigationManager.NavigateTo("/person-types");
+        }
+    }
+
+    private async Task Edit()
+    {
+        var response = await httpClient.PutAsJsonAsync("api/person-types", PersonType);
+        if (response.IsSuccessStatusCode)
+        {
+            await response.Content.ReadAsStringAsync();
+            navigationManager.NavigateTo("/person-types");
+        }
+    }
+
+    private async Task LoadInitialValues()
+    {
+        People = await httpClient.GetFromJsonAsync<IEnumerable<PersonDto>>("api/people")
+        ?? Enumerable.Empty<PersonDto>();
+    }
+
+    private async Task LoadInitialValues(string id)
+    {
+        var response = await httpClient
+        .GetFromJsonAsync<IEnumerable<PersonTypeDto>>($"api/person-types/{id}");
+
+        PersonType = response?.FirstOrDefault() ?? new PersonTypeDto();
+    }
+}

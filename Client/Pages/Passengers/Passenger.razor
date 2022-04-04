@@ -1,0 +1,83 @@
+@page "/passengers"
+
+@inject HttpClient httpClient
+@inject IJSRuntime jsRuntime
+@inject NavigationManager navigationManager
+
+<section class="title-section">
+    <h3>Pasajeros</h3>
+    <button class="btn btn-sm btn-success" @onclick="Add">Agregar nuevo</button>
+</section>
+<hr />
+
+<table class="table">
+    <thead>
+        <tr>
+            <th scope="col">Individuo</th>
+            <th scope="col">Cantidad de equipaje</th>
+            <th scope="col">Acciones</th>
+        </tr>
+    </thead>
+    <tbody>
+        @if (!Passengers.Any())
+        {
+            <text>No existen registros que mostrar.</text>
+        }
+        else 
+        {
+            @foreach (var passenger in Passengers)
+            {
+                <tr>
+                    <td>@passenger.PersonFullName</td>
+                    <td>@passenger.QuantityBaggage maletas</td>
+                    <td>
+                        <span class="icon fa-solid fa-trash-can" aria-hidden="true"
+                        @onclick=@(() => Delete(passenger.PassengerId))></span>
+                        <span class="icon fa-solid fa-pencil" aria-hidden="true"
+                        @onclick=@(() => Edit(passenger.PassengerId))></span>
+                    </td>
+                </tr>
+            }
+        }
+    </tbody>
+</table>
+
+@code {
+    public Passenger()
+    {
+        Passengers = new List<PassengerWithDescriptionDto>();
+    }
+
+    private IEnumerable<PassengerWithDescriptionDto> Passengers { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadInitialValues();
+    }
+
+    private void Add()
+    {
+        navigationManager.NavigateTo($"/passengers/add");
+    }
+
+    private void Edit(int id)
+    {
+        navigationManager.NavigateTo($"/passengers/add/{id}");
+    }
+
+    private async Task Delete(int id)
+    {
+        if (!await jsRuntime.InvokeAsync<bool>("confirm",
+        "¿Esta seguro que desea eliminar el pasajero?"))
+            return;
+
+        await httpClient.DeleteAsync($"api/passengers/{id}");
+        await LoadInitialValues();
+    }
+
+    private async Task LoadInitialValues()
+    {
+        Passengers = await httpClient.GetFromJsonAsync<IEnumerable<PassengerWithDescriptionDto>>("api/passengers")
+        ?? Enumerable.Empty<PassengerWithDescriptionDto>();
+    }
+}

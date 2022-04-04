@@ -1,0 +1,85 @@
+@page "/users"
+
+@inject HttpClient httpClient
+@inject IJSRuntime jsRuntime
+@inject NavigationManager navigationManager
+
+<section class="title-section">
+    <h3>Usuarios</h3>
+    <button class="btn btn-sm btn-success" @onclick="Add">Agregar nuevo</button>
+</section>
+<hr />
+
+<table class="table">
+    <thead>
+        <tr>
+            <th scope="col">Individuo</th>
+            <th scope="col">Rol</th>
+            <th scope="col">Usuario</th>
+            <th scope="col">Acciones</th>
+        </tr>
+    </thead>
+    <tbody>
+        @if (!Users.Any())
+        {
+            <text>No existen registros que mostrar.</text>
+        }
+        else 
+        {
+            @foreach (var user in Users)
+            {
+                <tr>
+                    <td>@user.PersonFullName</td>
+                    <td>@user.RolName</td>
+                    <td>@user.Username</td>
+                    <td>
+                        <span class="icon fa-solid fa-trash-can" aria-hidden="true"
+                        @onclick=@(() => Delete(user.UserId))></span>
+                        <span class="icon fa-solid fa-pencil" aria-hidden="true"
+                        @onclick=@(() => Edit(user.UserId))></span>
+                    </td>
+                </tr>
+            }
+        }
+    </tbody>
+</table>
+
+@code {
+    public User()
+    {
+        Users = new List<UserWithDescription>();
+    }
+
+    private IEnumerable<UserWithDescription> Users { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadInitialValues();
+    }
+
+    private void Add()
+    {
+        navigationManager.NavigateTo($"/users/add");
+    }
+
+    private void Edit(int id)
+    {
+        navigationManager.NavigateTo($"/users/add/{id}");
+    }
+
+    private async Task Delete(int id)
+    {
+        if (!await jsRuntime.InvokeAsync<bool>("confirm",
+        "¿Esta seguro que desea eliminar el usuario?"))
+            return;
+
+        await httpClient.DeleteAsync($"api/users/{id}");
+        await LoadInitialValues();
+    }
+
+    private async Task LoadInitialValues()
+    {
+        Users = await httpClient.GetFromJsonAsync<IEnumerable<UserWithDescription>>("api/users")
+        ?? Enumerable.Empty<UserWithDescription>();
+    }
+}
