@@ -7,9 +7,11 @@ public class UserController : ControllerBase
 {
     private readonly ICommand _command;
     private readonly ILogger<UserController> _logger;
+    private readonly JsonWebToken _jwt;
 
-    public UserController(ICommand command, ILogger<UserController> logger)
+    public UserController(ICommand command, ILogger<UserController> logger, JsonWebToken jwt)
     {
+        _jwt = jwt ?? throw new ArgumentNullException(nameof(jwt));
         _command = command ?? throw new ArgumentNullException(nameof(command));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
@@ -114,6 +116,29 @@ public class UserController : ControllerBase
             .Param("Password", user.Password)
             .OnError(ex => _logger.LogError(ex, "Error creating user"))
             .Exec();
+    }
+
+    [HttpPost("login")]
+    public async Task<ActionResult<UserToken>> Login([FromBody] UserInfo userInfo)
+    {
+        _logger.LogInformation("Login user");
+
+        bool flag = false;
+        IEnumerable<string> roles = new List<string>() { "admin", "user" };
+
+        await _command
+             .Sql(@"select username, password from dbo.Users
+                where username = @Username
+                    and [password] = @Password")
+             .Param("Username", userInfo.Username)
+             .Param("Password", userInfo.Password)
+             .OnError(ex => _logger.LogError(ex, "Error login user"))
+             .Map(reader =>
+             {
+                 flag = (true) ? true : false;
+             });
+
+        return (flag) ? _jwt.CreateJsonWebToken(userInfo, roles) : new UserToken();
     }
 
     [HttpPut]

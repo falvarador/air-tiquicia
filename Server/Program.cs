@@ -6,6 +6,7 @@ var builder = WebApplication.CreateBuilder(args);
 // Add services to the container.
 
 builder.Services.AddLocalization();
+builder.Services.AddScoped<JsonWebToken>();
 builder.Services.AddTransient<ICommand>(options => new Command(builder.Configuration.GetConnectionString("SqlServer")));
 builder.Services.AddControllersWithViews();
 
