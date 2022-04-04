@@ -1,0 +1,41 @@
+@page "/"
+
+@inject HttpClient httpClient
+@inject NavigationManager navigationManager
+@layout EmptyLayout
+
+<h3>Iniciar sesión</h3>
+
+<EditForm Model="@User" OnValidSubmit="SubmitForm">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    <aside class="mb-3">
+        <label for="username" class="form-label">Usuario</label>
+        <input autocomplete="off" type="text" class="form-control" id="username" @bind="User.Username" />
+    </aside>
+    <aside class="mb-3">
+        <label for="password" class="form-label">Password</label>
+        <input autocomplete="off" type="password" class="form-control" id="password" @bind="User.Password" />
+    </aside>
+
+    <button type="submit" class="btn btn-sm btn-success">Enviar</button>
+
+</EditForm>
+
+@code {
+    private UserInfo User = new UserInfo();
+
+    private async Task SubmitForm()
+    {
+        var response = await httpClient.PostAsJsonAsync("api/users/login", User);
+        if (response.IsSuccessStatusCode)
+        {
+            var token = await response.Content.ReadAsStringAsync();
+
+            Console.WriteLine($"token: {token}");
+
+            navigationManager.NavigateTo("/home");
+        }
+    }
+}

@@ -1,5 +1,6 @@
 @page "/person-types"
 
+@attribute [Authorize(Roles = "admin")]
 @inject HttpClient httpClient
 @inject IJSRuntime jsRuntime
 @inject NavigationManager navigationManager
