@@ -1,7 +1,9 @@
 @page "/"
 
 @inject HttpClient httpClient
+@inject ILoginService loginService
 @inject NavigationManager navigationManager
+
 @layout EmptyLayout
 
 <h3>Iniciar sesión</h3>
@@ -33,7 +35,7 @@
         {
             var token = await response.Content.ReadAsStringAsync();
 
-            Console.WriteLine($"token: {token}");
+            await loginService.Login(token);
 
             navigationManager.NavigateTo("/home");
         }

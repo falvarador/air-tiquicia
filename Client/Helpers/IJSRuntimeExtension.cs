@@ -11,6 +11,6 @@ public static class IJSRuntimeExtension
     public static ValueTask<string> GetFromLocalStorage(this IJSRuntime js, string key)
         => js.InvokeAsync<string>("localStorage.getItem", key);
 
-    public static ValueTask<object> RemoveItem(this IJSRuntime js, string key)
+    public static ValueTask<object> RemoveFromLocalStorage(this IJSRuntime js, string key)
         => js.InvokeAsync<object>("localStorage.removeItem", key);
 }

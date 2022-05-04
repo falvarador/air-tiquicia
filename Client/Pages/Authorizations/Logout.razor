@@ -1,0 +1,12 @@
+@inject ILoginService loginService
+@inject NavigationManager navigationManager
+
+<span class="oi oi-home" aria-hidden="true" onclick="Signout"></span> Salir
+
+@code {
+    private async Task Signout()
+    {
+        await loginService.Logout();
+        @* navigationManager.NavigateTo(""); *@
+    }
+}
