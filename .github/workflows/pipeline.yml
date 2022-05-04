@@ -1,13 +1,14 @@
-name: Deployment Pipeline
+name: .NET
 
 on:
   push:
-    branches:
-      - main
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
 
 jobs:
   build:
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-latest
     
     steps:
       - name: Checkout repository 
