@@ -1,4 +1,4 @@
-name: .NET
+name: Build and test
 
 on:
   push:
@@ -8,20 +8,20 @@ on:
 
 jobs:
   build:
+
     runs-on: ubuntu-latest
+
+    steps: 
+    - uses: actions/checkout@v2
+      with:
+        fetch-depth: 0
+
+    - uses: actions/setup-dotnet@v1
+      with:
+        dotnet-version: 6.0.x
     
-    steps:
-      - name: Checkout repository 
-      - uses: actions/checkout@v3
-        with:
-          fetch-depth: 0 
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v2
-        with:
-          dotnet-version: 6.0.x
-      - name: Restore dependencies
-        run: dotnet restore
-      - name: Build solution/project
-        run: dotnet build --no-restore 
-      - name: Test solution/project
-        run: dotnet test --no-build --verbosity normal
+    - run: dotnet restore
+    
+    - run: dotnet build -c Release --no-restore
+    
+    - run: dotnet test -c Release --no-build --verbosity normal --filter "Category!=LongRunning"
