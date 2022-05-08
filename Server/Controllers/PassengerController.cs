@@ -86,7 +86,6 @@ public class PassengerController : ControllerBase
         Passenger passenger = new()
         {
             PassengerId = rnd.Next(1, 100000),
-            PersonId = passengerDto.PersonId,
             QuantityBaggage = passengerDto.QuantityBaggage
         };
 
@@ -112,8 +111,6 @@ public class PassengerController : ControllerBase
 
         Passenger passenger = new()
         {
-            PassengerId = passengerDto.PassengerId,
-            PersonId = passengerDto.PersonId,
             QuantityBaggage = passengerDto.QuantityBaggage
         };
 

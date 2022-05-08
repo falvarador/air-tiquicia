@@ -1,0 +1,94 @@
+@inject HttpClient httpClient
+@inject NavigationManager navigationManager
+
+<EditForm Model="SearchFlight" OnValidSubmit="SubmitForm">
+    <section class="title-section">
+        <h3>Buscar vuelos</h3>
+        <button class="btn btn-sm btn-success" type="submit">
+            Buscar
+        </button>
+    </section>
+    <hr />
+
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    <section class="row">
+        <aside class="col-md-4">
+            <label for="departure-destination" class="form-label">Origen</label>
+            <InputSelect class="form-select" id="departure-destination" aria-label="Departure destination select"
+                @bind-Value="SearchFlight.Departure">
+                <option value=null>Selecciona una opción</option>
+                @foreach (var destination in Destinations)
+                {
+                    <option value="@destination.DestinationId">@destination.Name, @destination.Location</option>
+                }
+            </InputSelect>
+        </aside>
+        <aside class="col-md-4">
+            <label for="arrival-destination" class="form-label">Destino</label>
+            <InputSelect class="form-select" id="arrival-destination" aria-label="Arrival destination select"
+                @bind-Value="SearchFlight.Arrival">
+                <option value=null>Selecciona una opción</option>
+                @foreach (var destination in Destinations)
+                {
+                    <option value="@destination.DestinationId">@destination.Name, @destination.Location</option>
+                }
+            </InputSelect>
+        </aside>
+    </section>
+    <section class="row">
+        <aside class="col-md-4">
+            <label for="departure-date" class="form-label">Salida</label>
+            <InputDate autocomplete="off" class="form-control" id="departure-date"
+                min="@SearchFlight.DepartureDate.ToString("yyyy-MM-dd")" @bind-Value="SearchFlight.DepartureDate" />
+        </aside>
+        <aside class="col-md-4">
+            <label for="return-date" class="form-label">Regreso</label>
+            <InputDate autocomplete="off" class="form-control" id="return-date" disabled=@isRoundTrip
+                min="@SearchFlight.DepartureDate.ToString("yyyy-MM-dd")" @bind-Value="SearchFlight.ReturnDate" />
+        </aside>
+    </section>
+    <section class="row">
+        <aside class="col-md-4">
+            <label for="passengers" class="form-label">Cantidad de pasajeros</label>
+            <InputNumber autocomplete="off" class="form-control" id="passengers" min="1" max="6"
+                @bind-Value="SearchFlight.NumberOfPassengers" />
+        </aside>
+        <aside class="col-md-4">
+            <section class="form-check form-switch">
+                <InputCheckbox autocomplete="off" class="form-check-input" id="roind-trip" @bind-Value="isRoundTrip" />
+                <label for="round-trip" class="form-check-label">Viaje de un solo trayecto</label>
+            </section>
+        </aside>
+    </section>
+</EditForm>
+
+@code {
+    private bool isRoundTrip { get; set; }
+    private SearchFlightDto SearchFlight { get; set; }
+    private IEnumerable<DestinationDto> Destinations { get; set; }
+
+    public SearchFlightForm()
+    {
+        isRoundTrip = false;
+        SearchFlight = new SearchFlightDto();
+        Destinations = new List<DestinationDto>();
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadInitialValues();
+    }
+
+    public void SubmitForm()
+    {
+        navigationManager.NavigateTo($"/search-flights/{SearchFlight.Departure}/{SearchFlight.Arrival}/{SearchFlight.DepartureDate.ToString("yyyy-MM-dd")}/{SearchFlight.ReturnDate.ToString("yyyy-MM-dd")}/{SearchFlight.NumberOfPassengers}");
+    }
+
+    private async Task LoadInitialValues()
+    {
+        Destinations = await httpClient.GetFromJsonAsync<IEnumerable<DestinationDto>>("api/destinations")
+        ?? Enumerable.Empty<DestinationDto>();
+    }
+}

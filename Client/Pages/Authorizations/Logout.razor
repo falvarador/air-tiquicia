@@ -1,12 +1,21 @@
 @inject ILoginService loginService
 @inject NavigationManager navigationManager
 
-<span class="oi oi-home" aria-hidden="true" onclick="Signout"></span> Salir
+<style @scope>
+    button {
+        background-color: transparent;
+        border: none;
+        color: blue;
+        text-decoration: underline;
+    }
+</style>
+
+<button class="oi oi-home" aria-hidden="true" @onclick=@Signout>Salir</button>
 
 @code {
     private async Task Signout()
     {
         await loginService.Logout();
-        @* navigationManager.NavigateTo(""); *@
+        navigationManager.NavigateTo("");
     }
 }

@@ -1,13 +1,20 @@
-@page "/flights"
+@page "/search-flights/{departure}/{arrival}/{departureDate:datetime}/{returnDate:datetime}/{passengers:int}"
 
-@attribute [Authorize(Roles = "admin")]
 @inject HttpClient httpClient
 @inject IJSRuntime jsRuntime
 @inject NavigationManager navigationManager
 
+@layout LandingLayout
+
+<style @scope>
+    .pointer {
+        cursor: pointer;
+    }
+</style>
+
 <section class="title-section">
-    <h3>Vuelos</h3>
-    <button class="btn btn-sm btn-success" @onclick="Add">Agregar nuevo</button>
+    <h3>Vuelos disponibles</h3>
+    @* <button class="btn btn-sm btn-success" @onclick="Add">???</button> *@
 </section>
 <hr />
 
@@ -21,7 +28,6 @@
             <th scope="col">Hora de salida</th>
             <th scope="col">Hora de llegada</th>
             <th scope="col">Price</th>
-            <th scope="col">Acciones</th>
         </tr>
     </thead>
     <tbody>
@@ -29,11 +35,11 @@
         {
             <text>No existen registros que mostrar.</text>
         }
-        else 
+        else
         {
             @foreach (var flight in Flights)
             {
-                <tr>
+                <tr class="pointer" @onclick=@(() => View(flight.Number))>
                     <td>@flight.Number</td>
                     <td>@flight.DurationHours:@flight.DurationMinutes horas</td>
                     <td>@flight.DepartureDate.ToShortDateString()</td>
@@ -41,12 +47,6 @@
                     <td>@flight.DepartureHours:@flight.DepartureMinutes</td>
                     <td>@flight.ArrivalHours:@flight.ArrivalMinutes</td>
                     <td>$ @flight.Price</td>
-                    <td>
-                        <span class="icon fa-solid fa-trash-can" aria-hidden="true"
-                        @onclick=@(() => Delete(flight.Number))></span>
-                        <span class="icon fa-solid fa-pencil" aria-hidden="true"
-                        @onclick=@(() => Edit(flight.Number))></span>
-                    </td>
                 </tr>
             }
         }
@@ -54,41 +54,42 @@
 </table>
 
 @code {
-    public Flight()
+    [Parameter]
+    public string Departure { get; set; }
+    [Parameter]
+    public string Arrival { get; set; }
+    [Parameter]
+    public DateTime DepartureDate { get; set; }
+    [Parameter]
+    public DateTime ReturnDate { get; set; }
+    [Parameter]
+    public int Passengers { get; set; }
+    private IEnumerable<FlightDto> Flights { get; set; }
+
+    public SearchFlight()
     {
+        Departure = string.Empty;
+        Arrival = string.Empty;
+        DepartureDate = DateTime.Now;
+        ReturnDate = DateTime.Now;
         Flights = new List<FlightDto>();
     }
 
-    private IEnumerable<FlightDto> Flights { get; set; }
 
     protected override async Task OnInitializedAsync()
     {
         await LoadInitialValues();
     }
 
-    private void Add()
+    private void View(string number)
     {
-        navigationManager.NavigateTo($"/flights/add");
-    }
-
-    private void Edit(string id)
-    {
-        navigationManager.NavigateTo($"/flights/add/{id}");
-    }
-
-    private async Task Delete(string id)
-    {
-        if (!await jsRuntime.InvokeAsync<bool>("confirm",
-        "¿Esta seguro que desea eliminar el vuelo?"))
-            return;
-
-        await httpClient.DeleteAsync($"api/flights/{id}");
-        await LoadInitialValues();
+        navigationManager.NavigateTo($"/passengers/add/{number}");
     }
 
     private async Task LoadInitialValues()
     {
-        Flights = await httpClient.GetFromJsonAsync<IEnumerable<FlightDto>>("api/flights")
+        Flights = await
+        httpClient.GetFromJsonAsync<IEnumerable<FlightDto>>($"api/flights/search/{Departure}/{Arrival}/{DepartureDate.ToString("yyyy-MM-dd")}/{ReturnDate.ToString("yyyy-MM-dd")}/{Passengers}")
         ?? Enumerable.Empty<FlightDto>();
     }
 }

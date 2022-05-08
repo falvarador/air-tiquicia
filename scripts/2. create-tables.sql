@@ -1,6 +1,26 @@
 USE AirTiquiciaBD
 GO 
 
+-- Se crea la tabla que almacena la información de una aerolínea.
+IF  EXISTS (SELECT * FROM sys.objects 
+    WHERE object_id = OBJECT_ID(N'[dbo].[Airlines]') 
+    AND type in (N'U'))
+DROP TABLE [dbo].[Airlines]
+GO
+
+CREATE TABLE dbo.Airlines
+(
+    id INT IDENTITY(1, 1) NOT NULL,
+    airline_id VARCHAR(25) NOT NULL,
+    name VARCHAR(50) NOT NULL,
+    location VARCHAR(250) NOT NULL,
+)
+ALTER TABLE dbo.Airlines ADD CONSTRAINT [PK_Airline] PRIMARY KEY CLUSTERED
+(
+   id ASC 
+) WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, IGNORE_DUP_KEY = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON) ON [PRIMARY]
+GO
+
 -- Se crea la tabla que almacena la información de una persona.
 IF  EXISTS (SELECT * FROM sys.objects 
     WHERE object_id = OBJECT_ID(N'[dbo].[People]') 
@@ -113,6 +133,29 @@ ALTER TABLE dbo.Baggages_Weight ADD CONSTRAINT [PK_Baggage_Weight] PRIMARY KEY C
 ) WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, IGNORE_DUP_KEY = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON) ON [PRIMARY]
 GO
 
+-- Se crea la tabla que almacena la información del equipaje de un pasajero.
+IF  EXISTS (SELECT * FROM sys.objects 
+    WHERE object_id = OBJECT_ID(N'[dbo].[Baggages_Passenger]') 
+    AND type in (N'U'))
+DROP TABLE [dbo].[Baggages_Passenger]
+GO
+
+CREATE TABLE dbo.Baggages_Passenger
+(
+    id INT IDENTITY(1, 1) NOT NULL,
+    passenger_id INT NOT NULL,
+    baggage_weight_id INT NOT NULL
+)
+ALTER TABLE dbo.Baggages_Passenger ADD CONSTRAINT [PK_Baggage_Passenger] PRIMARY KEY CLUSTERED
+(
+   id ASC 
+) WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, IGNORE_DUP_KEY = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON) ON [PRIMARY]
+GO
+ALTER TABLE [dbo].[Baggages_Passenger]  WITH CHECK ADD  CONSTRAINT [FK_Passenger_Baggage_Passenger_Id] FOREIGN KEY([passenger_id])
+REFERENCES [dbo].[Passengers] ([id])
+ALTER TABLE [dbo].[Baggages_Passenger]  WITH CHECK ADD  CONSTRAINT [FK_Baggages_Passenger_Baggages_Weight_Id] FOREIGN KEY([baggage_weight_id])
+REFERENCES [dbo].[Baggages_Weight] ([id])
+
 -- Se crea la tabla que almacena la información de un pasajero.
 IF  EXISTS (SELECT * FROM sys.objects 
     WHERE object_id = OBJECT_ID(N'[dbo].[Passengers]') 
@@ -126,6 +169,7 @@ CREATE TABLE dbo.Passengers
     passenger_id INT NOT NULL,
     person_pk_id INT NOT NULL,
     person_id INT NOT NULL,
+    type varchar(50) NOT NULL,
     quantity_baggage TINYINT NOT NULL
 )
 ALTER TABLE dbo.Passengers ADD CONSTRAINT [PK_Passenger] PRIMARY KEY CLUSTERED
@@ -285,6 +329,27 @@ GO
 ALTER TABLE [dbo].[Crew_Flights]  WITH CHECK ADD  CONSTRAINT [FK_Crew_Flights_Person_Crew] FOREIGN KEY([person_crew_id])
 REFERENCES [dbo].[People_Crew] ([id])
 
+-- Se crea la tabla que almacena la información de un pasajero en un vuelo.
+IF  EXISTS (SELECT * FROM sys.objects 
+    WHERE object_id = OBJECT_ID(N'[dbo].[Passenger_Flights]') 
+    AND type in (N'U'))
+DROP TABLE [dbo].[Passenger_Flights]
+GO
+
+CREATE TABLE dbo.Passenger_Flights
+(
+    id INT IDENTITY(1, 1) NOT NULL,
+    flight_id INT NOT NULL,
+    passenger_id INT NOT NULL
+)
+ALTER TABLE dbo.Passenger_Flights ADD CONSTRAINT [PK_Passenger_Flight] PRIMARY KEY CLUSTERED
+(
+   id ASC 
+) WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, IGNORE_DUP_KEY = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON) ON [PRIMARY]
+GO
+ALTER TABLE [dbo].[Passenger_Flights]  WITH CHECK ADD  CONSTRAINT [FK_Passenger_Flights_Flights] FOREIGN KEY([flight_id])
+REFERENCES [dbo].[Flights] ([id])
+
 -- Se crea la tabla que almacena la información de un tipo de vuelo.
 IF  EXISTS (SELECT * FROM sys.objects 
     WHERE object_id = OBJECT_ID(N'[dbo].[Flight_Types]') 
@@ -327,7 +392,7 @@ CREATE TABLE dbo.Flights
     flight_type_id INT NOT NULL,
     departure_destination_id INT NOT NULL,
     arrival_destination_id INT NOT NULL,
-    crew_flight_id INT NOT NULL,
+    price DECIMAL(18, 2) NOT NULL,
 )
 ALTER TABLE dbo.Flights ADD CONSTRAINT [PK_Flight] PRIMARY KEY CLUSTERED
 (
@@ -342,5 +407,3 @@ ALTER TABLE [dbo].[Flights]  WITH CHECK ADD  CONSTRAINT [FK_Flight_Departure_Des
 REFERENCES [dbo].[Destinations] ([id])
 ALTER TABLE [dbo].[Flights]  WITH CHECK ADD  CONSTRAINT [FK_Flight_Arrival_Destination] FOREIGN KEY([arrival_destination_id])
 REFERENCES [dbo].[Destinations] ([id])
-ALTER TABLE [dbo].[Flights]  WITH CHECK ADD  CONSTRAINT [FK_Flight_Crew_Flight] FOREIGN KEY([crew_flight_id])
-REFERENCES [dbo].[Crew_Flights] ([id])

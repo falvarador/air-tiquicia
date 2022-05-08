@@ -19,5 +19,5 @@ public class Flight
     public int FlightTypeId { get; set; }
     public int DepartureDestinationId { get; set; }
     public int ArrivalDestinationId { get; set; }
-    public int CrewFlightId { get; set; }
+    public decimal Price { get; set; }
 }

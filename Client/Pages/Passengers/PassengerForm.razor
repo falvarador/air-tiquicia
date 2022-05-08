@@ -1,14 +1,15 @@
-@page "/passengers/add"
-@page "/passengers/add/{id}"
+@page "/passengers/add/{number}"
 
 @inject HttpClient httpClient
 @inject NavigationManager navigationManager
 
-<EditForm Model="Passenger" OnValidSubmit="SubmitForm">
+@layout LandingLayout
+
+<EditForm Model="Person" OnValidSubmit="SubmitForm">
     <section class="title-section">
         <h3>Pasajero</h3>
         <button class="btn btn-sm btn-success" type="submit">
-            @(string.IsNullOrEmpty(id) ? "Agregar" : "Editar")
+            Procesar
         </button>
     </section>
     <hr />
@@ -16,51 +17,50 @@
     <DataAnnotationsValidator />
     <ValidationSummary />
 
-    <aside class="mb-3">
-        <label for="person" class="form-label">Individuo</label>
-        <InputSelect class="form-select" id="person" aria-label="Person select" @bind-Value="Passenger.PersonId">
-            <option value=null>Selecciona una opción</option>
-            @foreach (var person in People)
-            {
-                <option value="@person.PersonId">@person.Name @person.LastName</option>
-            }
-        </InputSelect>
-    </aside>
-    <aside class="mb-3">
-        <label for="quantity-baggage" class="form-label">Cantidad de equipaje</label>
-        <input autocomplete="off" type="number" class="form-control" id="quantity-baggage"
-            @bind="Passenger.QuantityBaggage" />
-    </aside>
+    <div class="mb-3">
+        <label for="name" class="form-label">Nombre</label>
+        <input autocomplete="off" type="text" class="form-control" id="name" @bind="Person.Name" />
+    </div>
+    <div class="mb-3">
+        <label for="last-name" class="form-label">Apellidos</label>
+        <input autocomplete="off" type="text" class="form-control" id="last-name" @bind="Person.LastName" />
+    </div>
+    <div class="mb-3">
+        <label for="telephone" class="form-label">Teléfono</label>
+        <input autocomplete="off" type="text" class="form-control" id="telephone" @bind="Person.Telephone" />
+    </div>
+    <div class="mb-3">
+        <label for="email" class="form-label">Correo electrónico</label>
+        <input autocomplete="off" type="email" class="form-control" id="email" @bind="Person.Email" />
+    </div>
+    <div class="mb-3">
+        <label for="direction" class="form-label">Dirección</label>
+        <input autocomplete="off" type="text" class="form-control" id="direction" @bind="Person.Direction" />
+    </div>
 </EditForm>
 
 @code {
     [Parameter]
-    public string id { get; set; }
-    private PassengerDto Passenger { get; set; }
-
-    private IEnumerable<PersonDto> People { get; set; }
+    public string number { get; set; }
+    private PersonDto Person { get; set; }
 
     public PassengerForm()
     {
-        id = string.Empty;
-        Passenger = new PassengerDto();
-
-        People = new List<PersonDto>();
+        number = string.Empty;
+        Person = new PersonDto();
     }
 
     protected override async Task OnInitializedAsync()
     {
-        await LoadInitialValues();
-
-        if (!string.IsNullOrEmpty(id))
+        if (!string.IsNullOrEmpty(number))
         {
-            await LoadInitialValues(id);
+            await LoadInitialValues(number);
         }
     }
 
     public async Task SubmitForm()
     {
-        if (string.IsNullOrEmpty(id))
+        if (string.IsNullOrEmpty(number))
             await Add();
         else
             await Edit();
@@ -68,35 +68,29 @@
 
     private async Task Add()
     {
-        var response = await httpClient.PostAsJsonAsync("api/passengers", Passenger);
+        var response = await httpClient.PostAsJsonAsync("api/people", Person);
         if (response.IsSuccessStatusCode)
         {
             await response.Content.ReadAsStringAsync();
-            navigationManager.NavigateTo("/passengers");
+            navigationManager.NavigateTo("/people");
         }
     }
 
     private async Task Edit()
     {
-        var response = await httpClient.PutAsJsonAsync("api/passengers", Passenger);
+        var response = await httpClient.PutAsJsonAsync("api/people", Person);
         if (response.IsSuccessStatusCode)
         {
             await response.Content.ReadAsStringAsync();
-            navigationManager.NavigateTo("/passengers");
+            navigationManager.NavigateTo("/people");
         }
-    }
-
-    private async Task LoadInitialValues()
-    {
-        People = await httpClient.GetFromJsonAsync<IEnumerable<PersonDto>>("api/passengers/people")
-        ?? Enumerable.Empty<PersonDto>();
     }
 
     private async Task LoadInitialValues(string id)
     {
         var response = await httpClient
-        .GetFromJsonAsync<IEnumerable<PassengerDto>>($"api/passengers/{id}");
+        .GetFromJsonAsync<IEnumerable<PersonDto>>($"api/people/{id}");
 
-        Passenger = response?.FirstOrDefault() ?? new PassengerDto();
+        Person = response?.FirstOrDefault() ?? new PersonDto();
     }
 }

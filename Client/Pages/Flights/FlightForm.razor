@@ -99,6 +99,10 @@
         <input autocomplete="off" type="number" class="form-control" id="arrival-minutes"
             @bind="Flight.ArrivalMinutes" />
     </aside>
+    <aside class="mb-3">
+        <label for="price" class="form-label">Precio</label>
+        <input autocomplete="off" type="number" class="form-control" id="price" min="80" @bind="Flight.Price" />
+    </aside>
 </EditForm>
 
 @code {

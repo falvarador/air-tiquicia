@@ -7,6 +7,7 @@ public class FlightDto
         Number = string.Empty;
         DepartureDate = DateTime.Now;
         ArrivalDate = DateTime.Now + TimeSpan.FromDays(1);
+        Price = 80;
     }
 
     [Required, StringLength(50)]
@@ -34,6 +35,6 @@ public class FlightDto
     public int DepartureDestinationId { get; set; }
     [RequiredInteger]
     public int ArrivalDestinationId { get; set; }
-    // [RequiredInteger]
-    public int CrewFlightId { get; set; }
+    [Required]
+    public decimal Price { get; set; }
 }
