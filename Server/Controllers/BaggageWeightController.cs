@@ -1,97 +1,110 @@
-using Belgrade.SqlClient;
+using Dapper;
 using Microsoft.AspNetCore.Mvc;
+using System.Data;
 
 [ApiController]
 [Route("api/baggages-weight")]
 public class BaggageWeightController : ControllerBase
 {
-    private readonly ICommand _command;
+    private readonly IDbConnection _connection;
     private readonly ILogger<BaggageWeightController> _logger;
 
-    public BaggageWeightController(ICommand command, ILogger<BaggageWeightController> logger)
+    public BaggageWeightController(IDbConnection connection, ILogger<BaggageWeightController> logger)
     {
-        _command = command ?? throw new ArgumentNullException(nameof(command));
+        _connection = connection ?? throw new ArgumentNullException(nameof(connection));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     [HttpDelete("{id:int}")]
-    public async Task DeleteBaggageWeight(int id)
+    public async Task<IActionResult> DeleteBaggageWeight(int id)
     {
-        _logger.LogInformation("Delete specific baggage weight");
+        _logger.LogInformation("Deleteing baggage weight");
 
-        await _command
-            .Sql("delete from dbo.Baggages_Weight where id = @id")
-            .Param("id", id)
-            .OnError(ex => _logger.LogError(ex, "Error deleting baggage weight"))
-            .Exec();
+        var baggageWeight = await _connection.QueryFirstOrDefaultAsync<BaggageWeight>(@"
+            select * from dbo.Baggage_Weights where id = @Id", new { Id = id });
+
+        if (baggageWeight is null)
+        {
+            _logger.LogInformation("Baggage weight not found");
+            return NotFound();
+        }
+
+        await _connection.ExecuteAsync(@"
+            delete from dbo.Baggages_Weight where id = @id", new { id });
+
+        _logger.LogInformation("Baggage weight deleted");
+
+        return NoContent();
     }
 
     [HttpGet]
-    public async Task GetBaggagesWeight()
+    public async Task<IEnumerable<BaggageWeightDto>> GetBaggagesWeight()
     {
-        Response.ContentType = "application/json";
+        _logger.LogInformation("Getting baggage weights");
 
-        _logger.LogInformation("Get baggage weight");
+        var baggageWeights = await _connection.QueryAsync<BaggageWeightDto>(@"
+            select id, weight, price from dbo.Baggages_Weight");
 
-        await _command
-            .Sql(@"select id, weight, price from dbo.Baggages_Weight FOR JSON PATH")
-            .OnError(ex => _logger.LogError(ex, "Error geting baggage weight"))
-            .Stream(Response.Body, defaultOutput: "[]");
+        _logger.LogInformation("Baggage weights retrieved");
+
+        return baggageWeights;
     }
 
     [HttpGet("{id:int}")]
-    public async Task GetBaggageWeightById(int id)
+    public async Task<BaggageWeightDto> GetBaggageWeightById(int id)
     {
-        Response.ContentType = "application/json";
+        _logger.LogInformation("Getting baggage weight");
 
-        _logger.LogInformation("Get baggage weight by id");
+        var baggageWeight = await _connection.QueryFirstOrDefaultAsync<BaggageWeightDto>(@"
+            select id, weight, price from dbo.Baggages_Weight where id = @id", new { id });
 
-        await _command
-            .Sql(@"select id, weight, price from dbo.Baggages_Weight where id = @id FOR JSON PATH")
-            .Param("id", id)
-            .OnError(ex => _logger.LogError(ex, "Error geting baggage weight by id"))
-            .Stream(Response.Body, defaultOutput: "[]");
+        _logger.LogInformation("Baggage weight retrieved");
+
+        return baggageWeight;
     }
 
     [HttpPost]
-    public async Task AddBaggageWeight([FromBody] BaggageWeightDto baggageWeightDto)
+    public async Task<IActionResult> AddBaggageWeight([FromBody] BaggageWeightDto baggageWeightDto)
     {
         Random rnd = new();
 
-        _logger.LogInformation("Create new baggage weight");
+        _logger.LogInformation("Adding baggage weight");
 
-        BaggageWeight baggageWeight = new()
-        {
-            Price = baggageWeightDto.Price,
-            Weight = baggageWeightDto.Weight,
-        };
+        var baggageWeightId = await _connection.ExecuteScalarAsync<int>(@"
+            insert into dbo.Baggages_Weight (weight, price) 
+            values (@Weight, @Price)
+            select cast(scope_identity() as varchar(10))", baggageWeightDto);
 
-        await _command
-            .Sql(@"insert into dbo.Baggages_Weight (weight, price) values (@Weight, @Price)")
-            .Param("Weight", baggageWeightDto.Weight)
-            .Param("Price", baggageWeightDto.Price)
-            .OnError(ex => _logger.LogError(ex, "Error creating baggage weight"))
-            .Exec();
+        _logger.LogInformation("Baggage weight added");
+
+        return Created($"api/baggages-weight/{baggageWeightId}",
+            new BaggageWeight
+            {
+                Id = baggageWeightId,
+                Weight = baggageWeightDto.Weight,
+                Price = baggageWeightDto.Price
+            });
     }
 
     [HttpPut]
-    public async Task UpdateBaggageWeight([FromBody] BaggageWeightDto baggageWeightDto)
+    public async Task<IActionResult> UpdateBaggageWeight([FromBody] BaggageWeightDto baggageWeightDto)
     {
-        _logger.LogInformation("Update an existing baggage weight");
+        _logger.LogInformation("Updating baggage weight");
 
-        BaggageWeight baggageWeight = new()
-        {
-            Id = baggageWeightDto.Id,
-            Price = baggageWeightDto.Price,
-            Weight = baggageWeightDto.Weight
-        };
+        var baggageWeight = await _connection.QueryFirstOrDefaultAsync<BaggageWeight>(@"
+            select * from dbo.Baggages_Weight where id = @Id", new { Id = baggageWeightDto.Id });
 
-        await _command
-            .Sql(@"update dbo.Baggages_Weight set weight = @Weight, price = @Price where id = @Id")
-            .Param("Id", baggageWeight.Id)
-            .Param("Weight", baggageWeight.Weight)
-            .Param("Price", baggageWeight.Price)
-            .OnError(ex => _logger.LogError(ex, "Error updating baggage weight"))
-            .Exec();
+        if (baggageWeight is null)
+            return await AddBaggageWeight(baggageWeightDto);
+
+        await _connection.ExecuteAsync(@"update dbo.Baggages_Weight set weight = @Weight, price = @Price where id = @Id",
+            new
+            {
+                baggageWeightDto.Id,
+                baggageWeightDto.Price,
+                baggageWeightDto.Weight
+            });
+
+        return NoContent();
     }
 }

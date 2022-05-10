@@ -1,67 +1,77 @@
-using Belgrade.SqlClient;
+using Dapper;
 using Microsoft.AspNetCore.Mvc;
+using System.Data;
 
 [ApiController]
 [Route("api/aircrafts")]
 public class AircraftController : ControllerBase
 {
-    private readonly ICommand _command;
+    private readonly IDbConnection _connection;
     private readonly ILogger<AircraftController> _logger;
 
-    public AircraftController(ICommand command, ILogger<AircraftController> logger)
+    public AircraftController(IDbConnection connection, ILogger<AircraftController> logger)
     {
-        _command = command ?? throw new ArgumentNullException(nameof(command));
+        _connection = connection ?? throw new ArgumentNullException(nameof(connection));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     [HttpDelete("{id}")]
-    public async Task DeleteAircraft(string id)
+    public async Task<IActionResult> DeleteAircraft(string id)
     {
-        _logger.LogInformation("Delete specific aircraft");
+        _logger.LogInformation("Deleting aircraft");
 
-        await _command
-            .Sql("delete from dbo.Aircrafts where aircraft_id = @id")
-            .Param("id", id)
-            .OnError(ex => _logger.LogError(ex, "Error deleting aircraft"))
-            .Exec();
+        var aircraft = await _connection.QueryFirstOrDefaultAsync<Aircraft>("select * from dbo.Aircrafts where aircraft_id = @Id", new { Id = id });
+
+        if (aircraft is null)
+        {
+            _logger.LogInformation("Aircraft not found");
+            return NotFound();
+        }
+
+        await _connection.ExecuteAsync(@"delete from dbo.Aircrafts where aircraft_id = @id", new { id });
+
+        _logger.LogInformation("Aircraft deleted");
+
+        return NoContent();
     }
 
     [HttpGet]
-    public async Task GetAircrafts()
+    public async Task<IEnumerable<AircraftWithDescriptionDto>> GetAircrafts()
     {
-        Response.ContentType = "application/json";
+        _logger.LogInformation("Getting aircrafts");
 
-        _logger.LogInformation("Get aircrafts");
+        var aircrafts = await _connection.QueryAsync<AircraftWithDescriptionDto>(@"
+            select aircraft_id as aircraftId, ac.description, act.type_id as typeId, act.description as typeDescription 
+            from dbo.Aircrafts ac 
+                inner join dbo.Aircraft_Types act on ac.type_id = act.type_id");
 
-        await _command
-            .Sql(@"select aircraft_id as aircraftId, ac.description, act.type_id as typeId, act.description as typeDescription from dbo.Aircrafts ac 
-                inner join dbo.Aircraft_Types act on ac.type_id = act.type_id FOR JSON PATH")
-            .OnError(ex => _logger.LogError(ex, "Error geting aircrafts"))
-            .Stream(Response.Body, defaultOutput: "[]");
+        _logger.LogInformation("Aircrafts retrieved");
+
+        return aircrafts;
     }
 
     [HttpGet("{id}")]
-    public async Task GetAircraftById(string id)
+    public async Task<AircraftWithDescriptionDto> GetAircraftById(string id)
     {
-        Response.ContentType = "application/json";
+        _logger.LogInformation("Getting aircraft");
 
-        _logger.LogInformation("Get aircraft by id");
-
-        await _command
-            .Sql(@"select aircraft_id as aircraftId, ac.description, act.type_id as typeId, act.description as typeDescription from dbo.Aircrafts ac 
+        var aircraft = await _connection.QueryFirstOrDefaultAsync<AircraftWithDescriptionDto>(@"
+            select aircraft_id as aircraftId, ac.description, act.type_id as typeId, act.description as typeDescription 
+            from dbo.Aircrafts ac 
                 inner join dbo.Aircraft_Types act on ac.type_id = act.type_id
-                where aircraft_id = @id FOR JSON PATH")
-            .Param("id", id)
-            .OnError(ex => _logger.LogError(ex, "Error geting aircraft by id"))
-            .Stream(Response.Body, defaultOutput: "[]");
+            where aircraft_id = @id", new { Id = id });
+
+        _logger.LogInformation("Aircraft retrieved");
+
+        return aircraft;
     }
 
     [HttpPost]
-    public async Task AddAircraft([FromBody] AircraftDto aircraftDto)
+    public async Task<IActionResult> AddAircraft([FromBody] AircraftDto aircraftDto)
     {
         Random rnd = new();
 
-        _logger.LogInformation("Create new aircraft");
+        _logger.LogInformation("Adding aircraft");
 
         Aircraft aircraft = new()
         {
@@ -70,35 +80,37 @@ public class AircraftController : ControllerBase
             TypeId = aircraftDto.TypeId
         };
 
-        await _command
-            .Sql(@"insert into dbo.Aircrafts (aircraft_id, description, type_id) 
-                values (@AircraftId, @Description, @TypeId)")
-            .Param("AircraftId", aircraft.AircraftId)
-            .Param("Description", aircraft.Description)
-            .Param("TypeId", aircraft.TypeId)
-            .OnError(ex => _logger.LogError(ex, "Error creating aircraft"))
-            .Exec();
+        var aircraftId = await _connection.ExecuteScalarAsync<string>(@"
+            insert into dbo.Aircrafts (aircraft_id, description, type_id) 
+            values (@AircraftId, @Description, @TypeId)
+            select cast(scope_identity() as varchar(10))", aircraft);
+
+        _logger.LogInformation("Aircraft added");
+
+        return Created($"/api/aircrafts/{aircraftId}", aircraft);
     }
 
     [HttpPut]
-    public async Task UpdateAircraft([FromBody] AircraftDto aircraftDto)
+    public async Task<IActionResult> UpdateAircraft([FromBody] AircraftDto aircraftDto)
     {
         _logger.LogInformation("Update an existing aircraft");
 
-        Aircraft aircraft = new()
-        {
-            AircraftId = aircraftDto.AircraftId,
-            Description = aircraftDto.Description,
-            TypeId = aircraftDto.TypeId
-        };
+        var aircraft = await _connection.QueryFirstOrDefaultAsync<Aircraft>("select * from dbo.Aircrafts where aircraft_id = @Id", new { Id = aircraftDto.AircraftId });
 
-        await _command
-            .Sql(@"update dbo.Aircrafts set description = @Description, type_id = @TypeId 
-                where aircraft_id = @AircraftId")
-            .Param("AircraftId", aircraft.AircraftId)
-            .Param("Description", aircraft.Description)
-            .Param("TypeId", aircraft.TypeId)
-            .OnError(ex => _logger.LogError(ex, "Error updating aircraft"))
-            .Exec();
+        if (aircraft is null)
+            return await AddAircraft(aircraftDto);
+
+        await _connection.ExecuteAsync(@"
+            update dbo.Aircrafts set description = @Description, type_id = @TypeId 
+                where aircraft_id = @AircraftId", new
+        {
+            aircraftDto.AircraftId,
+            aircraftDto.Description,
+            aircraftDto.TypeId
+        });
+
+        _logger.LogInformation("Aircraft updated");
+
+        return NoContent();
     }
 }

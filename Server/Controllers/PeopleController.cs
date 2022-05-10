@@ -1,15 +1,18 @@
 using Belgrade.SqlClient;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Caching.Memory;
 
 [ApiController]
 [Route("api/people")]
 public class PeopleController : ControllerBase
 {
     private readonly ICommand _command;
+    private readonly IMemoryCache _cache;
     private readonly ILogger<PeopleController> _logger;
 
-    public PeopleController(ICommand command, ILogger<PeopleController> logger)
+    public PeopleController(ICommand command, IMemoryCache cache, ILogger<PeopleController> logger)
     {
+        _cache = cache ?? throw new ArgumentNullException(nameof(cache));
         _command = command ?? throw new ArgumentNullException(nameof(command));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
@@ -57,19 +60,30 @@ public class PeopleController : ControllerBase
     [HttpPost]
     public async Task AddPerson([FromBody] PersonDto personDto)
     {
-        Random rnd = new();
-
+        PersonDto cacheEntry = new PersonDto();
         _logger.LogInformation("Create new person");
+
+        if (!_cache.TryGetValue("people", out cacheEntry))
+        {
+            cacheEntry = personDto;
+
+            var cacheEntryOptions = new MemoryCacheEntryOptions()
+                .SetSlidingExpiration(TimeSpan.FromMinutes(5));
+
+            _cache.Set("people", cacheEntry, cacheEntryOptions);
+        }
 
         People person = new()
         {
-            PersonId = $"{rnd.Next(1, 100000)}",
+            PersonId = personDto.PersonId,
             Direction = personDto.Direction,
             Email = personDto.Email,
             LastName = personDto.LastName,
             Name = personDto.Name,
             Telephone = personDto.Telephone
         };
+
+
 
         await _command
             .Sql(@"insert into dbo.People (person_id, name, last_name, telephone, direction, email) 

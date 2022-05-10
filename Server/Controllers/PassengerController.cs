@@ -6,11 +6,14 @@ using Microsoft.AspNetCore.Mvc;
 public class PassengerController : ControllerBase
 {
     private readonly ICommand _command;
+    private readonly IEmailService _emailService;
     private readonly ILogger<PassengerController> _logger;
 
-    public PassengerController(ICommand command, ILogger<PassengerController> logger)
+    public PassengerController(ICommand command,
+        IEmailService emailService, ILogger<PassengerController> logger)
     {
         _command = command ?? throw new ArgumentNullException(nameof(command));
+        _emailService = emailService ?? throw new ArgumentNullException(nameof(emailService));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -35,9 +38,7 @@ public class PassengerController : ControllerBase
 
         await _command
             .Sql(@"select passenger_id as passengerId, ps.person_id as personId, pe.name + ' ' + pe.last_name as personFullName, quantity_baggage as quantityBaggage from dbo.Passengers ps
-                    inner join dbo.People pe on pe.id = ps.person_pk_id
-                    inner join dbo.Person_Types pt on pt.person_pk_id = ps.person_pk_id
-                where pt.type = 2 FOR JSON PATH")
+                    inner join dbo.People pe on pe.id = ps.person_pk_id FOR JSON PATH")
             .OnError(ex => _logger.LogError(ex, "Error geting passengers"))
             .Stream(Response.Body, defaultOutput: "[]");
     }
@@ -81,7 +82,7 @@ public class PassengerController : ControllerBase
     {
         Random rnd = new();
 
-        _logger.LogInformation("Create new passenger");
+        _logger.LogInformation("Adding passenger");
 
         Passenger passenger = new()
         {
@@ -92,16 +93,29 @@ public class PassengerController : ControllerBase
         await _command
             .Sql(@"declare @PersonPkId int
 
-                select @PersonPkId = id from dbo.People
-                where person_id = @PersonId
+                insert into dbo.People (person_id, name, last_name, telephone, direction, email) 
+                values (@PersonId, @Name, @LastName, @Telephone, @Direction, @Email)
 
-                insert into dbo.Passengers (passenger_id, person_pk_id,  person_id, quantity_baggage) 
-                values (@PassengerId, @PersonPkId,  @PersonId, @QuantityBaggage)")
+                select @PersonPkId = cast(scope_identity() as varchar(10))
+
+                insert into dbo.Passengers (passenger_id, person_pk_id,  person_id, [type], quantity_baggage) 
+                values (@PassengerId, @PersonPkId,  @PersonId, @Type, @QuantityBaggage)")
+                .Param("PersonId", passengerDto.PersonId)
+                .Param("Name", passengerDto.Name)
+                .Param("LastName", passengerDto.LastName)
+                .Param("Telephone", passengerDto.Telephone)
+                .Param("Direction", passengerDto.Direction)
+                .Param("Email", passengerDto.Email)
                 .Param("PassengerId", passenger.PassengerId)
-                .Param("PersonId", passenger.PersonId)
+                .Param("Type", passengerDto.Type)
                 .Param("QuantityBaggage", passenger.QuantityBaggage)
                 .OnError(ex => _logger.LogError(ex, "Error creating passenger"))
                 .Exec();
+
+        _emailService.SendEmail(passengerDto.Email, "Se ha registrado su vuelo", @$"
+            <h1>Hola,</h1>
+            <p>Se ha registrado su vuelo.</p>
+            ");
     }
 
     [HttpPut]

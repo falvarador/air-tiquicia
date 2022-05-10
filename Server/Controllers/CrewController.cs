@@ -1,95 +1,106 @@
-using Belgrade.SqlClient;
+using Dapper;
 using Microsoft.AspNetCore.Mvc;
+using System.Data;
 
 [ApiController]
 [Route("api/crews")]
 public class CrewController : ControllerBase
 {
-    private readonly ICommand _command;
+    private readonly IDbConnection _connection;
     private readonly ILogger<CrewController> _logger;
 
-    public CrewController(ICommand command, ILogger<CrewController> logger)
+    public CrewController(IDbConnection connection, ILogger<CrewController> logger)
     {
-        _command = command ?? throw new ArgumentNullException(nameof(command));
+        _connection = connection ?? throw new ArgumentNullException(nameof(connection));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     [HttpDelete("{id}")]
-    public async Task DeleteCrew(string id)
+    public async Task<IActionResult> DeleteCrew(string id)
     {
-        _logger.LogInformation("Delete specific crew");
+        _logger.LogInformation("Deleteing crew");
 
-        await _command
-            .Sql("delete from dbo.Crews where crew_id = @id")
-            .Param("id", id)
-            .OnError(ex => _logger.LogError(ex, "Error deleting crew"))
-            .Exec();
+        var crew = await _connection.QueryFirstOrDefaultAsync<Crew>(@"
+            select * from dbo.Crews where crew_id = @Id", new { Id = id });
+
+        if (crew is null)
+        {
+            _logger.LogInformation("Crew not found");
+            return NotFound();
+        }
+
+        await _connection.ExecuteAsync(@"delete from dbo.Crews where crew_id = @id", new { id });
+
+        _logger.LogInformation("Crew deleted");
+
+        return NoContent();
     }
 
     [HttpGet]
-    public async Task GetCrews()
+    public async Task<IEnumerable<CrewDto>> GetCrews()
     {
-        Response.ContentType = "application/json";
+        _logger.LogInformation("Getting crews");
 
-        _logger.LogInformation("Get crews");
+        var crews = await _connection.QueryAsync<CrewDto>(@"
+            select crew_id as crewId, description from dbo.Crews");
 
-        await _command
-            .Sql(@"select crew_id as crewId, description from dbo.Crews FOR JSON PATH")
-            .OnError(ex => _logger.LogError(ex, "Error geting crews"))
-            .Stream(Response.Body, defaultOutput: "[]");
+        _logger.LogInformation("Crews retrieved");
+
+        return crews;
     }
 
     [HttpGet("{id}")]
-    public async Task GetCrewById(string id)
+    public async Task<CrewDto> GetCrewById(string id)
     {
-        Response.ContentType = "application/json";
+        _logger.LogInformation("Getting crew");
 
-        _logger.LogInformation("Get crew by id");
+        var crew = await _connection.QueryFirstOrDefaultAsync<CrewDto>(@"
+            select crew_id as crewId, description from dbo.Crews 
+            where crew_id = @id", new { id });
 
-        await _command
-            .Sql(@"select crew_id as crewId, description from dbo.Crews where crew_id = @id FOR JSON PATH")
-            .Param("id", id)
-            .OnError(ex => _logger.LogError(ex, "Error geting crew by id"))
-            .Stream(Response.Body, defaultOutput: "[]");
+        _logger.LogInformation("Crew retrieved");
+
+        return crew;
     }
 
     [HttpPost]
-    public async Task AddCrew([FromBody] CrewDto crewDto)
+    public async Task<IActionResult> AddCrew([FromBody] CrewDto crewDto)
     {
         Random rnd = new();
 
-        _logger.LogInformation("Create new crew");
+        _logger.LogInformation("Adding crew");
 
-        Crew crew = new()
+        var crew = new Crew
         {
             CrewId = $"{rnd.Next(1, 100000)}",
             Description = crewDto.Description
         };
 
-        await _command
-            .Sql(@"insert into dbo.Crews (crew_id, description) values (@CrewId, @Description)")
-            .Param("CrewId", crew.CrewId)
-            .Param("Description", crew.Description)
-            .OnError(ex => _logger.LogError(ex, "Error creating crew"))
-            .Exec();
+        var crewId = await _connection.ExecuteScalarAsync<int>(@"
+            insert into dbo.Crews (crew_id, description) 
+            values (@CrewId, @Description)
+            select cast(scope_identity() as int)", crew);
+
+        _logger.LogInformation("Crew added");
+
+        return Created($"api/crews/{crewId}", crew);
     }
 
     [HttpPut]
-    public async Task UpdateCrew([FromBody] CrewDto crewDto)
+    public async Task<IActionResult> UpdateCrew([FromBody] CrewDto crewDto)
     {
-        _logger.LogInformation("Update an existing crew");
+        _logger.LogInformation("Updating crew");
 
-        Crew crew = new()
-        {
-            CrewId = crewDto.CrewId,
-            Description = crewDto.Description
-        };
+        var crew = await _connection.QueryFirstOrDefaultAsync<Crew>(@"
+            select * from dbo.Crews where crew_id = @Id", new { Id = crewDto.CrewId });
 
-        await _command
-            .Sql(@"update dbo.Crews set description = @Description where crew_id = @CrewId")
-            .Param("CrewId", crew.CrewId)
-            .Param("Description", crew.Description)
-            .OnError(ex => _logger.LogError(ex, "Error updating crew"))
-            .Exec();
+        if (crew is null)
+            return await AddCrew(crewDto);
+
+        await _connection.ExecuteAsync(@"
+            update dbo.Crews set description = @Description
+            where crew_id = @CrewId", new { crewDto.Description, crewDto.CrewId });
+
+        return NoContent();
     }
 }

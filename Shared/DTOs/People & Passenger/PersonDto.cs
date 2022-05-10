@@ -12,6 +12,7 @@ public class PersonDto
         Email = string.Empty;
     }
 
+    [Required]
     public string PersonId { get; set; }
     [Required, MaxLength(100)]
     public string Name { get; set; }

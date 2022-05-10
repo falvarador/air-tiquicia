@@ -16,4 +16,21 @@ public static class PersonTypeEnumExtension
                 return "";
         }
     }
+
+    public static string ToEnumName(this PassengerTypeEnum passengerType)
+    {
+        switch (passengerType)
+        {
+            case PassengerTypeEnum.Empty:
+                return "Selecciona una opción";
+            case PassengerTypeEnum.Adult:
+                return "Adulto";
+            case PassengerTypeEnum.Baby:
+                return "Bebé";
+            case PassengerTypeEnum.Children:
+                return "Niño";
+            default:
+                return "";
+        }
+    }
 }

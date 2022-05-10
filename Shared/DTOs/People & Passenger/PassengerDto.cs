@@ -4,13 +4,17 @@ public class PassengerDto
 {
     public PassengerDto()
     {
-        Name = string.Empty;
-        LastName = string.Empty;
-        Telephone = string.Empty;
         Direction = string.Empty;
         Email = string.Empty;
+        LastName = string.Empty;
+        Name = string.Empty;
+        Telephone = string.Empty;
+        Type = string.Empty;
+        QuantityBaggage = 1;
     }
 
+    [Required]
+    public int PersonId { get; set; }
     [Required, MaxLength(100)]
     public string Name { get; set; }
     [Required, MaxLength(100)]

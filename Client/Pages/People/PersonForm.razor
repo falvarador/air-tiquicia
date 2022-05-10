@@ -17,6 +17,10 @@
     <ValidationSummary />
 
     <div class="mb-3">
+        <label for="name" class="form-label">ID</label>
+        <input autocomplete="off" type="text" class="form-control" max="25" id="name" @bind="Person.PersonId" />
+    </div>
+    <div class="mb-3">
         <label for="name" class="form-label">Nombre</label>
         <input autocomplete="off" type="text" class="form-control" id="name" @bind="Person.Name" />
     </div>
